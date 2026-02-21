@@ -48,9 +48,14 @@ export function fireKeyEvents(el, char) {
 export async function humanType(el, text) {
   await humanFocus(el);
   if (el.value) {
+    // Select all + delete to clear framework-managed inputs
+    el.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA", ctrlKey: true, bubbles: true }));
+    el.setSelectionRange(0, el.value.length);
+    el.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", code: "Backspace", bubbles: true }));
     el.value = "";
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
+    el.dispatchEvent(new KeyboardEvent("keyup", { key: "Backspace", code: "Backspace", bubbles: true }));
     await humanDelay(DELAY.SHORT);
   }
   for (let i = 0; i < text.length; i++) {
