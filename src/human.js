@@ -47,7 +47,12 @@ export function fireKeyEvents(el, char) {
 
 export async function humanType(el, text) {
   await humanFocus(el);
-  el.value = "";
+  if (el.value) {
+    el.value = "";
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    await humanDelay(DELAY.SHORT);
+  }
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
 

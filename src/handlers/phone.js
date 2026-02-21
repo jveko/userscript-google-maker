@@ -7,7 +7,9 @@ import { apiRequestWithRetry } from "../api.js";
 import { saveSession } from "../session.js";
 
 function hasPhoneRejectionError() {
-  return document.body.textContent.includes("has been used too many times");
+  const text = document.body.textContent;
+  return text.includes("has been used too many times") ||
+    text.includes("cannot be used for verification");
 }
 
 export async function handlePhoneVerificationPage() {
