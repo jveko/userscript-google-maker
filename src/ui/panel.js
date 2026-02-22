@@ -1,6 +1,6 @@
 import { STATE, SESSION_KEY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, setLastPath } from "../state.js";
+import { transition, getState, setLastPath } from "../state.js";
 import { stopSmsPoller } from "../sms.js";
 import { clearSession } from "../session.js";
 
@@ -77,7 +77,7 @@ function createDialogButton(text, bgColor) {
   return btn;
 }
 
-export function createStartButton() {
+export function createStartButton(hasSession) {
   const toggleBtn = createDraggableButton();
 
   const dialog = document.createElement("div");
@@ -96,14 +96,24 @@ export function createStartButton() {
     transition(STATE.SIGNING_IN);
     GM_setValue(SESSION_KEY, { started: true });
     dialog.style.display = "none";
-    cleanupDrag();
-    toggleBtn.remove();
+    showRunningState();
     log("Started by user - navigating to AddSession");
     setLastPath("");
     window.location.href = "https://accounts.google.com/AddSession";
   };
 
-  const clearBtn = createDialogButton("🗑 Clear", "#d93025");
+  const cancelBtn = createDialogButton("⏹ Cancel", "#d93025");
+  cancelBtn.onclick = () => {
+    clearSession();
+    transition(STATE.IDLE);
+    setLastPath("");
+    stopSmsPoller();
+    dialog.style.display = "none";
+    showIdleState();
+    log("Session cancelled by user");
+  };
+
+  const clearBtn = createDialogButton("🗑 Clear", "#5f6368");
   clearBtn.onclick = () => {
     clearSession();
     transition(STATE.IDLE);
@@ -116,9 +126,29 @@ export function createStartButton() {
     log("Session cleared by user");
   };
 
+  function showIdleState() {
+    startBtn.style.display = "block";
+    cancelBtn.style.display = "none";
+    toggleBtn.style.background = "#1a73e8";
+  }
+
+  function showRunningState() {
+    startBtn.style.display = "none";
+    cancelBtn.style.display = "block";
+    toggleBtn.style.background = "#d93025";
+  }
+
   dialog.appendChild(startBtn);
+  dialog.appendChild(cancelBtn);
   dialog.appendChild(clearBtn);
   document.body.appendChild(toggleBtn);
   document.body.appendChild(dialog);
+
+  if (hasSession) {
+    showRunningState();
+  } else {
+    showIdleState();
+  }
+
   log("Control panel injected");
 }

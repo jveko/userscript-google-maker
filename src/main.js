@@ -14,6 +14,7 @@ import { handlePasswordPage } from "./handlers/password.js";
 import { handlePhoneVerificationPage } from "./handlers/phone.js";
 import { handleSmsCodePage } from "./handlers/sms-code.js";
 import { handleRecoveryEmailPage } from "./handlers/recovery.js";
+import { handleRecoveryPhonePage } from "./handlers/recovery-phone.js";
 import { handleConfirmationPage } from "./handlers/confirmation.js";
 import { handleTermsPage } from "./handlers/terms.js";
 import { handleMyAccountPage } from "./handlers/myaccount.js";
@@ -40,6 +41,7 @@ if (
     { match: "/signup/startmtsmsidv", handler: handlePhoneVerificationPage, state: STATE.PHONE_VERIFICATION },
     { match: "/signup/verifyphone/idv", handler: handleSmsCodePage, state: STATE.WAITING_SMS },
     { match: "/signup/addrecoveryemail", handler: handleRecoveryEmailPage, state: STATE.FILLING_RECOVERY },
+    { match: "/signup/webaddrecoveryphone", handler: handleRecoveryPhonePage, state: STATE.SKIPPING_RECOVERY_PHONE },
     { match: "/signup/confirmation", handler: handleConfirmationPage, state: STATE.CONFIRMING },
     { match: "/signup/termsofservice", handler: handleTermsPage, state: STATE.ACCEPTING_TERMS },
   ];
@@ -70,23 +72,38 @@ if (
 
   if (window.location.hostname === "myaccount.google.com") {
     log("On myaccount.google.com");
-    if (loadSession()) {
-      log("Session found, confirming account");
-      handleMyAccountPage();
-    } else {
-      log("No session found, showing Start button");
-      createStartButton();
+
+    // Session storage may not be immediately accessible after redirect.
+    // Retry loading the session a few times before giving up.
+    async function tryLoadSessionAndConfirm() {
+      const MAX_RETRIES = 5;
+      const RETRY_DELAY = 2000;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        if (loadSession()) {
+          log("Session found on attempt " + attempt + ", confirming account");
+          createStartButton(true);
+          handleMyAccountPage();
+          return;
+        }
+        log("Session not found, retry " + attempt + "/" + MAX_RETRIES);
+        await new Promise((r) => setTimeout(r, RETRY_DELAY));
+      }
+      log("No session found after " + MAX_RETRIES + " retries, showing Start button");
+      createStartButton(false);
     }
+
+    tryLoadSessionAndConfirm().catch((err) => log("myaccount init error:", err));
   } else {
-    if (loadSession()) {
+    const hasSession = loadSession();
+    setInterval(detectAndRun, 1000);
+    if (hasSession) {
       transition(STATE.SIGNING_IN);
       log("Resuming from session");
-      setInterval(detectAndRun, 1000);
+      createStartButton(true);
       detectAndRun();
     } else {
       log("No session, showing Start button");
-      setInterval(detectAndRun, 1000);
-      createStartButton();
+      createStartButton(false);
     }
   }
 }
