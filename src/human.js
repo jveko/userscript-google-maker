@@ -38,27 +38,31 @@ export function fireKeyEvents(el, char) {
   } else {
     code = char;
   }
-  const opts = { key: char, code: code, bubbles: true };
+  const opts = { key: char, code: code, bubbles: true, composed: true };
   el.dispatchEvent(new KeyboardEvent("keydown", opts));
   el.dispatchEvent(new KeyboardEvent("keypress", opts));
-  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
   el.dispatchEvent(new KeyboardEvent("keyup", opts));
+}
+
+function setNativeValue(el, value) {
+  const nativeSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    "value"
+  )?.set;
+  if (nativeSetter) {
+    nativeSetter.call(el, value);
+  } else {
+    el.value = value;
+  }
 }
 
 export async function humanType(el, text) {
   await humanFocus(el);
   if (el.value) {
-    // Clear via native setter to work with framework-managed inputs on mobile
-    const nativeSetter = Object.getOwnPropertyDescriptor(
-      Object.getPrototypeOf(el), "value"
-    )?.set;
-    if (nativeSetter) {
-      nativeSetter.call(el, "");
-    } else {
-      el.value = "";
-    }
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
+    setNativeValue(el, "");
+    el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
     await humanDelay(DELAY.SHORT);
   }
   for (let i = 0; i < text.length; i++) {
@@ -66,22 +70,22 @@ export async function humanType(el, text) {
 
     if (char.match(/[a-zA-Z]/) && Math.random() < 0.08) {
       const typo = String.fromCharCode(char.charCodeAt(0) + rand(-2, 2));
-      el.value += typo;
+      setNativeValue(el, el.value + typo);
       fireKeyEvents(el, typo);
       await humanDelay(DELAY.TINY);
 
-      el.value = el.value.slice(0, -1);
+      setNativeValue(el, el.value.slice(0, -1));
       el.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Backspace", bubbles: true }),
+        new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, composed: true }),
       );
-      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
       el.dispatchEvent(
-        new KeyboardEvent("keyup", { key: "Backspace", bubbles: true }),
+        new KeyboardEvent("keyup", { key: "Backspace", bubbles: true, composed: true }),
       );
       await humanDelay(DELAY.BACKSPACE);
     }
 
-    el.value += char;
+    setNativeValue(el, el.value + char);
     fireKeyEvents(el, char);
 
     if (i > 0 && i % rand(5, 10) === 0) {
@@ -91,7 +95,7 @@ export async function humanType(el, text) {
     }
   }
 
-  el.dispatchEvent(new Event("change", { bubbles: true }));
+  el.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
   await humanDelay(100, 300);
 }
 

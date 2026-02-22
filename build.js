@@ -1,7 +1,10 @@
 import { readFileSync, mkdirSync } from "fs";
 import { build, context } from "esbuild";
 
-const banner = readFileSync("src/banner.txt", "utf-8").trimEnd();
+const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
+let banner = readFileSync("src/banner.txt", "utf-8").trimEnd();
+banner = banner.replace("{{VERSION}}", pkg.version);
+
 const watching = process.argv.includes("--watch");
 
 mkdirSync("dist", { recursive: true });

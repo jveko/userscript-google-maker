@@ -1,4 +1,6 @@
 {
+  "name": "google-accounts-helper",
+  "version": "3.6.1",
   "private": true,
   "type": "module",
   "scripts": {

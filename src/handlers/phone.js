@@ -2,7 +2,7 @@ import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
 import { transition, getConfig } from "../state.js";
 import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
-import { waitFor } from "../helpers.js";
+import { waitFor, awaitNavigationOrError } from "../helpers.js";
 import { apiRequestWithRetry } from "../api.js";
 import { saveSession } from "../session.js";
 
@@ -57,33 +57,14 @@ export async function handlePhoneVerificationPage() {
   await humanScroll();
   await humanDelay(1000, 3000);
 
-  const phoneInput = document.querySelector("#phoneNumberId");
-  if (phoneInput && phoneInput.value) {
-    phoneInput.focus();
-    const nativeSetter = Object.getOwnPropertyDescriptor(
-      Object.getPrototypeOf(phoneInput), "value"
-    )?.set;
-    if (nativeSetter) {
-      nativeSetter.call(phoneInput, "");
-    } else {
-      phoneInput.value = "";
-    }
-    phoneInput.dispatchEvent(new Event("input", { bubbles: true }));
-    phoneInput.dispatchEvent(new Event("change", { bubbles: true }));
-    await humanDelay(500, 1000);
-  }
-
   await humanFillInput("#phoneNumberId", config.phoneNumber);
   await humanClickNext();
 
-  setTimeout(() => {
-    if (hasPhoneRejectionError()) {
-      log("Detected 'too many times' error after submit, re-running handler");
-      handlePhoneVerificationPage().catch((e) =>
-        log("Re-run handler error:", e),
-      );
-    }
-  }, 5000);
+  const hasError = await awaitNavigationOrError([hasPhoneRejectionError]);
+  if (hasError) {
+    log("Detected 'too many times' error after submit, re-running handler");
+    return handlePhoneVerificationPage();
+  }
 
   return true;
 }
