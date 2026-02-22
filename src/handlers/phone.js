@@ -38,7 +38,7 @@ export async function handlePhoneVerificationPage() {
       log("Renew error:", err);
       return false;
     }
-    await humanDelay(400, 800);
+    await humanDelay(1000, 2000);
   } else {
     let data;
     try {
@@ -55,7 +55,7 @@ export async function handlePhoneVerificationPage() {
   }
 
   await humanScroll();
-  await humanDelay(400, 1000);
+  await humanDelay(1000, 2500);
 
   await humanFillInput("#phoneNumberId", config.phoneNumber);
   await humanClickNext();

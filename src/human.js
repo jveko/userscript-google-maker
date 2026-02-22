@@ -68,11 +68,13 @@ export async function humanType(el, text) {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
 
-    if (char.match(/[a-zA-Z]/) && Math.random() < 0.04) {
+    if (char.match(/[a-zA-Z]/) && Math.random() < 0.09) {
       const typo = String.fromCharCode(char.charCodeAt(0) + rand(-2, 2));
       setNativeValue(el, el.value + typo);
       fireKeyEvents(el, typo);
-      await humanDelay(DELAY.TINY);
+      
+      // longer delay realizing the mistake
+      await humanDelay(300, 600);
 
       setNativeValue(el, el.value.slice(0, -1));
       el.dispatchEvent(
@@ -82,6 +84,8 @@ export async function humanType(el, text) {
       el.dispatchEvent(
         new KeyboardEvent("keyup", { key: "Backspace", bubbles: true, composed: true }),
       );
+      
+      // wait before typing the correct char
       await humanDelay(DELAY.BACKSPACE);
     }
 
@@ -168,7 +172,11 @@ export async function humanClickNext() {
   await humanDelay(DELAY.LONG);
   const btn = getElementByXpath("//button[.//span[text()='Next']]");
   log("humanClickNext:", btn ? "✓ found" : "✗ not found");
-  if (btn) await simulateMobileTouch(btn);
+  if (btn) {
+    await simulateMobileTouch(btn);
+    // wait slightly before continuing so DOM has time to react naturally
+    await humanDelay(DELAY.SHORT);
+  }
 }
 
 export async function humanSelectDropdown(containerSelector, optionText) {
@@ -180,7 +188,7 @@ export async function humanSelectDropdown(containerSelector, optionText) {
   log("selectDropdown trigger:", trigger ? "✓" : "✗");
   if (!trigger) return;
 
-  await humanDelay(400, 900);
+  await humanDelay(DELAY.MEDIUM);
   await simulateMobileTouch(trigger);
   await humanDelay(DELAY.SHORT);
 
@@ -194,7 +202,8 @@ export async function humanSelectDropdown(containerSelector, optionText) {
 
   for (const opt of options) {
     if (opt.textContent.trim() === optionText) {
-      await humanDelay(DELAY.SHORT);
+      // simulate scanning the list
+      await humanDelay(DELAY.MEDIUM);
       await simulateMobileTouch(opt);
       log("selectDropdown: clicked", optionText);
       return;
