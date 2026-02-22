@@ -2,7 +2,7 @@ import { STATE, SESSION_KEY } from "../constants.js";
 import { log } from "../log.js";
 import { transition, getState, getConfig, setLastPath, getLastErrorMsg } from "../state.js";
 import { stopSmsPoller } from "../sms.js";
-import { clearSession } from "../session.js";
+import { clearSession, startNewSession, getSettings, saveSettings } from "../session.js";
 
 // --- Drag & Drop Utility ---
 
@@ -289,6 +289,65 @@ export function createStartButton(hasSession) {
     }
   }, 1000);
 
+  // Settings Section
+  const settingsRow = createElement("div", {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "0 4px",
+  });
+  const modeLabel = createElement("span", { fontSize: "13px", color: "#5f6368", fontWeight: "500" }, "Run Mode");
+  const modeToggleGroup = createElement("div", {
+    display: "flex",
+    background: isDark ? "#303134" : "#f1f3f4",
+    borderRadius: "6px",
+    padding: "2px",
+  });
+
+  const settings = getSettings();
+  
+  function createModeBtn(text, isActive) {
+    return createElement("button", {
+      padding: "4px 12px",
+      fontSize: "12px",
+      border: "none",
+      background: isActive ? (isDark ? "#3c4043" : "#fff") : "transparent",
+      color: isActive ? textColor : "#5f6368",
+      borderRadius: "4px",
+      cursor: "pointer",
+      fontWeight: isActive ? "600" : "400",
+      transition: "all 0.2s",
+      boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+    }, text);
+  }
+
+  const singleBtn = createModeBtn("Single", settings.mode === "single");
+  const contBtn = createModeBtn("Infinite", settings.mode === "continuous");
+
+  function setMode(mode) {
+    settings.mode = mode;
+    saveSettings(settings);
+    
+    const isSingle = mode === "single";
+    singleBtn.style.background = isSingle ? (isDark ? "#3c4043" : "#fff") : "transparent";
+    singleBtn.style.color = isSingle ? textColor : "#5f6368";
+    singleBtn.style.fontWeight = isSingle ? "600" : "400";
+    singleBtn.style.boxShadow = isSingle ? "0 1px 3px rgba(0,0,0,0.1)" : "none";
+    
+    contBtn.style.background = !isSingle ? (isDark ? "#3c4043" : "#fff") : "transparent";
+    contBtn.style.color = !isSingle ? textColor : "#5f6368";
+    contBtn.style.fontWeight = !isSingle ? "600" : "400";
+    contBtn.style.boxShadow = !isSingle ? "0 1px 3px rgba(0,0,0,0.1)" : "none";
+  }
+
+  singleBtn.onclick = () => setMode("single");
+  contBtn.onclick = () => setMode("continuous");
+
+  modeToggleGroup.appendChild(singleBtn);
+  modeToggleGroup.appendChild(contBtn);
+  settingsRow.appendChild(modeLabel);
+  settingsRow.appendChild(modeToggleGroup);
+
   // Actions Section
   const actionsGroup = createElement("div", {
     display: "flex",
@@ -350,6 +409,7 @@ export function createStartButton(hasSession) {
   actionsGroup.appendChild(clearBtn);
 
   body.appendChild(statusContainer);
+  body.appendChild(settingsRow);
   body.appendChild(actionsGroup);
   panel.appendChild(body);
   document.body.appendChild(panel);

@@ -40,3 +40,4 @@ export const STATE = {
 
 export const TAG = "[GoogleAccounts]";
 export const SESSION_KEY = "gah_config";
+export const SETTINGS_KEY = "gah_settings";
