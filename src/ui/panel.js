@@ -1,154 +1,326 @@
 import { STATE, SESSION_KEY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getState, setLastPath } from "../state.js";
+import { transition, getState, getConfig, setLastPath } from "../state.js";
 import { stopSmsPoller } from "../sms.js";
 import { clearSession } from "../session.js";
 
-function createDraggableButton() {
-  const btn = document.createElement("button");
-  btn.textContent = "⚙️";
-  btn.style.cssText =
-    "position:fixed;top:20px;left:20px;z-index:10000;" +
-    "width:48px;height:48px;font-size:24px;cursor:grab;" +
-    "background:#1a73e8;color:#fff;border:none;border-radius:50%;" +
-    "box-shadow:0 2px 8px rgba(0,0,0,0.3);transition:opacity 0.2s;";
-  btn.onmouseenter = () => (btn.style.opacity = "0.85");
-  btn.onmouseleave = () => (btn.style.opacity = "1");
-  return btn;
-}
+// --- Drag & Drop Utility ---
 
-function makeDraggable(el, onTap) {
+function makeDraggable(el, handle, onTap) {
   let isDragging = false;
   let startX, startY, initialLeft, initialTop;
+  let didDrag = false;
 
   const handleStart = (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' && e.target !== handle) return;
+    
     isDragging = true;
+    didDrag = false;
     const touch = e.touches ? e.touches[0] : e;
     startX = touch.clientX;
     startY = touch.clientY;
     initialLeft = el.offsetLeft;
     initialTop = el.offsetTop;
-    el.style.cursor = "grabbing";
-    e.preventDefault();
+    handle.style.cursor = "grabbing";
+    if(e.cancelable && e.target === handle) e.preventDefault();
   };
 
   const handleMove = (e) => {
     if (!isDragging) return;
+    didDrag = true;
     const touch = e.touches ? e.touches[0] : e;
-    el.style.left = initialLeft + (touch.clientX - startX) + "px";
-    el.style.top = initialTop + (touch.clientY - startY) + "px";
-    e.preventDefault();
+    
+    // Boundary checks
+    let newLeft = initialLeft + (touch.clientX - startX);
+    let newTop = initialTop + (touch.clientY - startY);
+    
+    // Snap to screen edges
+    const maxLeft = window.innerWidth - el.offsetWidth;
+    const maxTop = window.innerHeight - el.offsetHeight;
+    
+    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+    newTop = Math.max(0, Math.min(newTop, maxTop));
+    
+    el.style.left = newLeft + "px";
+    el.style.top = newTop + "px";
+    
+    if(e.cancelable) e.preventDefault();
   };
 
   const handleEnd = (e) => {
     if (!isDragging) return;
     isDragging = false;
-    el.style.cursor = "grab";
-    const touch = e.changedTouches ? e.changedTouches[0] : e;
-    const dx = Math.abs(touch.clientX - startX);
-    const dy = Math.abs(touch.clientY - startY);
-    if (dx < 5 && dy < 5) onTap();
+    handle.style.cursor = "grab";
+    if (!didDrag && onTap) onTap(e);
   };
 
-  el.addEventListener("mousedown", handleStart);
-  el.addEventListener("touchstart", handleStart);
+  handle.addEventListener("mousedown", handleStart);
+  handle.addEventListener("touchstart", handleStart, { passive: false });
   document.addEventListener("mousemove", handleMove);
   document.addEventListener("touchmove", handleMove, { passive: false });
   document.addEventListener("mouseup", handleEnd);
   document.addEventListener("touchend", handleEnd);
-
-  return function cleanup() {
-    document.removeEventListener("mousemove", handleMove);
-    document.removeEventListener("touchmove", handleMove);
-    document.removeEventListener("mouseup", handleEnd);
-    document.removeEventListener("touchend", handleEnd);
-  };
 }
 
-function createDialogButton(text, bgColor) {
+// --- UI Components ---
+
+function createElement(tag, styles = {}, text = "", id = "") {
+  const el = document.createElement(tag);
+  if (text) el.textContent = text;
+  if (id) el.id = "gah-" + id;
+  Object.assign(el.style, styles);
+  return el;
+}
+
+function createDialogButton(text, bgColor, hoverColor) {
   const btn = document.createElement("button");
   btn.textContent = text;
-  btn.style.cssText =
-    "padding:10px 20px;font-size:16px;font-weight:bold;cursor:pointer;" +
-    "background:" + bgColor + ";color:#fff;border:none;border-radius:8px;" +
-    "box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:opacity 0.2s;";
-  btn.onmouseenter = () => (btn.style.opacity = "0.85");
-  btn.onmouseleave = () => (btn.style.opacity = "1");
+  btn.style.cssText = `
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: ${bgColor};
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  `;
+  btn.onmouseenter = () => (btn.style.background = hoverColor);
+  btn.onmouseleave = () => (btn.style.background = bgColor);
+  btn.onmousedown = () => (btn.style.transform = "scale(0.96)");
+  btn.onmouseup = () => (btn.style.transform = "scale(1)");
   return btn;
 }
 
+function createStatRow(label, valueId) {
+  const row = createElement("div", {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "6px 0",
+    borderBottom: "1px solid #eee",
+    fontSize: "13px",
+  });
+  
+  const labelEl = createElement("span", { color: "#5f6368", fontWeight: "500" }, label);
+  const valueEl = createElement("span", { 
+    color: "#202124", 
+    fontFamily: "monospace",
+    fontWeight: "600",
+    maxWidth: "150px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap"
+  }, "-", valueId);
+  
+  row.appendChild(labelEl);
+  row.appendChild(valueEl);
+  return row;
+}
+
+// --- Main Panel Initialization ---
+
 export function createStartButton(hasSession) {
-  const toggleBtn = createDraggableButton();
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const bgMain = isDark ? "#202124" : "#ffffff";
+  const bgHeader = isDark ? "#303134" : "#f1f3f4";
+  const textColor = isDark ? "#e8eaed" : "#202124";
+  const borderColor = isDark ? "#3c4043" : "#dadce0";
 
-  const dialog = document.createElement("div");
-  dialog.style.cssText =
-    "position:fixed;top:80px;left:20px;z-index:9999;" +
-    "background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2);" +
-    "padding:16px;display:none;flex-direction:column;gap:12px;min-width:200px;";
-
-  const cleanupDrag = makeDraggable(toggleBtn, () => {
-    dialog.style.display =
-      dialog.style.display === "none" ? "flex" : "none";
+  // Main Container
+  const panel = createElement("div", {
+    position: "fixed",
+    top: "20px",
+    right: "20px",
+    zIndex: "9999",
+    background: bgMain,
+    borderRadius: "12px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+    border: `1px solid ${borderColor}`,
+    width: "280px",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    transition: "height 0.3s ease",
   });
 
-  const startBtn = createDialogButton("▶ Start", "#1a73e8");
+  // Header (Draggable)
+  const header = createElement("div", {
+    background: bgHeader,
+    padding: "12px 16px",
+    cursor: "grab",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottom: `1px solid ${borderColor}`,
+  });
+
+  const titleGroup = createElement("div", { display: "flex", alignItems: "center", gap: "8px" });
+  const statusIndicator = createElement("div", {
+    width: "10px",
+    height: "10px",
+    borderRadius: "50%",
+    background: hasSession ? "#34a853" : "#9aa0a6",
+    boxShadow: hasSession ? "0 0 6px #34a853" : "none",
+    transition: "background 0.3s"
+  }, "", "status-dot");
+  
+  const title = createElement("span", { 
+    fontWeight: "bold", 
+    fontSize: "14px",
+    color: textColor,
+    userSelect: "none"
+  }, "Google Maker");
+
+  const collapseBtn = createElement("button", {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "16px",
+    color: "#5f6368",
+    padding: "4px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transition: "transform 0.2s"
+  }, "▼");
+
+  titleGroup.appendChild(statusIndicator);
+  titleGroup.appendChild(title);
+  header.appendChild(titleGroup);
+  header.appendChild(collapseBtn);
+  panel.appendChild(header);
+
+  // Body Content
+  const body = createElement("div", {
+    padding: "16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  });
+
+  // Status Section
+  const statusContainer = createElement("div", {
+    display: "flex",
+    flexDirection: "column",
+    gap: "0px",
+    background: isDark ? "#303134" : "#f8f9fa",
+    padding: "8px 12px",
+    borderRadius: "8px",
+  });
+  
+  statusContainer.appendChild(createStatRow("State", "stat-state"));
+  statusContainer.appendChild(createStatRow("Email", "stat-email"));
+  statusContainer.appendChild(createStatRow("Phone", "stat-phone"));
+  
+  // Update loop for stats
+  setInterval(() => {
+    const stateEl = document.getElementById("gah-stat-state");
+    const emailEl = document.getElementById("gah-stat-email");
+    const phoneEl = document.getElementById("gah-stat-phone");
+    const dotEl = document.getElementById("gah-status-dot");
+    const cfg = getConfig();
+    const st = getState();
+    
+    if (stateEl) stateEl.textContent = st.replace("FILLING_", "").replace("_", " ");
+    if (emailEl) emailEl.textContent = cfg?.email || "-";
+    if (phoneEl) phoneEl.textContent = cfg?.phoneNumber || "-";
+    
+    if (dotEl) {
+      if (st === STATE.IDLE) {
+        dotEl.style.background = "#9aa0a6";
+        dotEl.style.boxShadow = "none";
+      } else if (st === STATE.COMPLETED) {
+        dotEl.style.background = "#4285f4";
+        dotEl.style.boxShadow = "0 0 6px #4285f4";
+      } else {
+        dotEl.style.background = "#34a853";
+        dotEl.style.boxShadow = "0 0 6px #34a853";
+      }
+    }
+  }, 1000);
+
+  // Actions Section
+  const actionsGroup = createElement("div", {
+    display: "flex",
+    gap: "8px",
+  });
+
+  const startBtn = createDialogButton("▶ Start", "#1a73e8", "#1557b0");
+  const cancelBtn = createDialogButton("⏹ Stop", "#d93025", "#b31412");
+  const clearBtn = createDialogButton("🗑 Reset", "#5f6368", "#3c4043");
+
   startBtn.onclick = () => {
     transition(STATE.SIGNING_IN);
     GM_setValue(SESSION_KEY, { started: true });
-    dialog.style.display = "none";
-    showRunningState();
-    log("Started by user - navigating to AddSession");
+    updateActionVisibility(true);
+    log("Started - navigating to AddSession");
     setLastPath("");
     window.location.href = "https://accounts.google.com/AddSession";
   };
 
-  const cancelBtn = createDialogButton("⏹ Cancel", "#d93025");
   cancelBtn.onclick = () => {
     clearSession();
     transition(STATE.IDLE);
     setLastPath("");
     stopSmsPoller();
-    dialog.style.display = "none";
-    showIdleState();
-    log("Session cancelled by user");
+    updateActionVisibility(false);
+    log("Session stopped");
   };
 
-  const clearBtn = createDialogButton("🗑 Clear", "#5f6368");
   clearBtn.onclick = () => {
     clearSession();
     transition(STATE.IDLE);
     setLastPath("");
     stopSmsPoller();
-    clearBtn.textContent = "✓ Cleared";
+    updateActionVisibility(false);
+    const ogText = clearBtn.textContent;
+    clearBtn.textContent = "✓ Reset";
+    clearBtn.style.background = "#34a853";
     setTimeout(() => {
-      clearBtn.textContent = "🗑 Clear";
+      clearBtn.textContent = ogText;
+      clearBtn.style.background = "#5f6368";
     }, 1500);
-    log("Session cleared by user");
+    log("Session reset");
   };
 
-  function showIdleState() {
-    startBtn.style.display = "block";
-    cancelBtn.style.display = "none";
-    toggleBtn.style.background = "#1a73e8";
+  function updateActionVisibility(isRunning) {
+    if (isRunning) {
+      startBtn.style.display = "none";
+      cancelBtn.style.display = "flex";
+      clearBtn.style.display = "flex";
+    } else {
+      startBtn.style.display = "flex";
+      cancelBtn.style.display = "none";
+      clearBtn.style.display = "flex";
+    }
   }
 
-  function showRunningState() {
-    startBtn.style.display = "none";
-    cancelBtn.style.display = "block";
-    toggleBtn.style.background = "#d93025";
-  }
+  actionsGroup.appendChild(startBtn);
+  actionsGroup.appendChild(cancelBtn);
+  actionsGroup.appendChild(clearBtn);
 
-  dialog.appendChild(startBtn);
-  dialog.appendChild(cancelBtn);
-  dialog.appendChild(clearBtn);
-  document.body.appendChild(toggleBtn);
-  document.body.appendChild(dialog);
+  body.appendChild(statusContainer);
+  body.appendChild(actionsGroup);
+  panel.appendChild(body);
+  document.body.appendChild(panel);
 
-  if (hasSession) {
-    showRunningState();
-  } else {
-    showIdleState();
-  }
+  // Logic
+  updateActionVisibility(hasSession);
 
-  log("Control panel injected");
+  let isCollapsed = false;
+  makeDraggable(panel, header, () => {
+    isCollapsed = !isCollapsed;
+    body.style.display = isCollapsed ? "none" : "flex";
+    collapseBtn.style.transform = isCollapsed ? "rotate(-90deg)" : "rotate(0deg)";
+  });
+
+  log("Advanced UI injected");
 }
