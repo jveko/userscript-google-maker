@@ -11,15 +11,20 @@ function apiRequest(method, path, body) {
       headers: { "Content-Type": "application/json" },
       timeout: API_TIMEOUT,
       onload: (res) => {
+        let body;
+        try { body = JSON.parse(res.responseText); } catch (_) { body = null; }
         if (res.status < 200 || res.status >= 300) {
           log("API HTTP error:", res.status, res.statusText);
-          reject(new Error("HTTP " + res.status));
+          const err = new Error("HTTP " + res.status);
+          err.status = res.status;
+          err.body = body;
+          reject(err);
           return;
         }
-        try {
-          resolve(JSON.parse(res.responseText));
-        } catch (e) {
-          reject(e);
+        if (body !== null) {
+          resolve(body);
+        } else {
+          reject(new Error("Invalid JSON response"));
         }
       },
       onerror: (err) => reject(err),
@@ -49,10 +54,15 @@ export async function apiRequestWithRetry(method, path, body) {
 
 export { apiRequest };
 
+export async function regenerateEmail(id) {
+  return apiRequestWithRetry("PATCH", "/email/" + id, {});
+}
+
 export async function fetchConfig() {
   log("Fetching config from API...");
   const data = await apiRequestWithRetry("POST", "/generate", {});
   const config = {
+    id: data.id,
     firstName: data.firstName,
     lastName: data.lastName,
     birthMonth: MONTH_NAMES[parseInt(data.birthMonth, 10) - 1] || "January",
