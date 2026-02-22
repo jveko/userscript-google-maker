@@ -1,6 +1,6 @@
 import { STATE, SESSION_KEY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getState, getConfig, setLastPath } from "../state.js";
+import { transition, getState, getConfig, setLastPath, getLastErrorMsg } from "../state.js";
 import { stopSmsPoller } from "../sms.js";
 import { clearSession } from "../session.js";
 
@@ -220,18 +220,40 @@ export function createStartButton(hasSession) {
   statusContainer.appendChild(createStatRow("Email", "stat-email"));
   statusContainer.appendChild(createStatRow("Phone", "stat-phone"));
   
+  const errorContainer = createElement("div", {
+    color: "#d93025",
+    fontSize: "12px",
+    fontWeight: "600",
+    display: "none",
+    paddingTop: "8px",
+    marginTop: "8px",
+    borderTop: "1px solid #fce8e6",
+  }, "", "stat-error");
+  statusContainer.appendChild(errorContainer);
+  
   // Update loop for stats
   setInterval(() => {
     const stateEl = document.getElementById("gah-stat-state");
     const emailEl = document.getElementById("gah-stat-email");
     const phoneEl = document.getElementById("gah-stat-phone");
+    const errEl = document.getElementById("gah-stat-error");
     const dotEl = document.getElementById("gah-status-dot");
     const cfg = getConfig();
     const st = getState();
+    const errMsg = getLastErrorMsg();
     
     if (stateEl) stateEl.textContent = st.replace("FILLING_", "").replace("_", " ");
     if (emailEl) emailEl.textContent = cfg?.email || "-";
     if (phoneEl) phoneEl.textContent = cfg?.phoneNumber || "-";
+    
+    if (errEl) {
+      if (st === STATE.ERROR && errMsg) {
+        errEl.textContent = "Error: " + errMsg;
+        errEl.style.display = "block";
+      } else {
+        errEl.style.display = "none";
+      }
+    }
     
     if (dotEl) {
       if (st === STATE.IDLE) {
@@ -240,10 +262,18 @@ export function createStartButton(hasSession) {
       } else if (st === STATE.COMPLETED) {
         dotEl.style.background = "#4285f4";
         dotEl.style.boxShadow = "0 0 6px #4285f4";
+      } else if (st === STATE.ERROR) {
+        dotEl.style.background = "#d93025";
+        dotEl.style.boxShadow = "0 0 6px #d93025";
       } else {
         dotEl.style.background = "#34a853";
         dotEl.style.boxShadow = "0 0 6px #34a853";
       }
+    }
+    
+    // Auto-sync UI buttons if state hits ERROR
+    if (st === STATE.ERROR && startBtn.style.display === "none") {
+      updateActionVisibility(false);
     }
   }, 1000);
 

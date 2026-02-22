@@ -108,17 +108,67 @@ export async function humanFillInput(selector, value) {
   return el;
 }
 
+export async function simulateMobileTouch(el) {
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    el.click(); // Fallback if element is not visually rendered
+    return;
+  }
+
+  // Generate a random coordinate somewhere inside the element's bounding box
+  const clientX = Math.round(rect.left + (rect.width * (0.2 + Math.random() * 0.6)));
+  const clientY = Math.round(rect.top + (rect.height * (0.2 + Math.random() * 0.6)));
+
+  const touchObj = new Touch({
+    identifier: Date.now(),
+    target: el,
+    clientX: clientX,
+    clientY: clientY,
+    radiusX: 2.5,
+    radiusY: 2.5,
+    rotationAngle: 10,
+    force: 0.5,
+  });
+
+  const evtOpts = {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    clientX: clientX,
+    clientY: clientY,
+    touches: [touchObj],
+    targetTouches: [touchObj],
+    changedTouches: [touchObj]
+  };
+
+  el.dispatchEvent(new TouchEvent("touchstart", evtOpts));
+  await humanDelay(30, 80);
+
+  el.dispatchEvent(new TouchEvent("touchend", evtOpts));
+  await humanDelay(10, 30);
+  
+  el.dispatchEvent(new PointerEvent("pointerdown", { ...evtOpts, pointerId: 1, pointerType: "touch" }));
+  el.dispatchEvent(new MouseEvent("mousedown", evtOpts));
+  await humanDelay(10, 30);
+  
+  el.dispatchEvent(new PointerEvent("pointerup", { ...evtOpts, pointerId: 1, pointerType: "touch" }));
+  el.dispatchEvent(new MouseEvent("mouseup", evtOpts));
+  
+  el.click(); // The browser normally dispatches this last
+}
+
 export async function humanClick(el) {
   if (!el) return;
   await humanDelay(300, 800);
-  el.click();
+  await simulateMobileTouch(el);
 }
 
 export async function humanClickNext() {
   await humanDelay(DELAY.LONG);
   const btn = getElementByXpath("//button[.//span[text()='Next']]");
   log("humanClickNext:", btn ? "✓ found" : "✗ not found");
-  if (btn) btn.click();
+  if (btn) await simulateMobileTouch(btn);
 }
 
 export async function humanSelectDropdown(containerSelector, optionText) {
@@ -131,7 +181,7 @@ export async function humanSelectDropdown(containerSelector, optionText) {
   if (!trigger) return;
 
   await humanDelay(400, 900);
-  trigger.click();
+  await simulateMobileTouch(trigger);
   await humanDelay(DELAY.SHORT);
 
   let options = container.querySelectorAll('li[role="option"]');
@@ -145,7 +195,7 @@ export async function humanSelectDropdown(containerSelector, optionText) {
   for (const opt of options) {
     if (opt.textContent.trim() === optionText) {
       await humanDelay(DELAY.SHORT);
-      opt.click();
+      await simulateMobileTouch(opt);
       log("selectDropdown: clicked", optionText);
       return;
     }

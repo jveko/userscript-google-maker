@@ -1,8 +1,14 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
 import { transition, getConfig } from "../state.js";
-import { humanScroll, humanDelay, humanFillInput } from "../human.js";
-import { waitFor, getElementByXpath } from "../helpers.js";
+import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
+import { waitFor, awaitNavigationOrError } from "../helpers.js";
+
+function hasPasswordError() {
+  const text = document.body.textContent;
+  return text.includes("Use 8 characters or more for your password") ||
+    text.includes("Please choose a stronger password");
+}
 
 export async function handlePasswordPage() {
   transition(STATE.FILLING_PASSWORD);
@@ -15,10 +21,13 @@ export async function handlePasswordPage() {
   await humanDelay(400, 1000);
   await humanFillInput('input[name="PasswdAgain"]', config.password);
 
-  await humanDelay(DELAY.LONG);
-  const btn =
-    document.querySelector("#createpasswordNext button") ||
-    getElementByXpath("//button[.//span[text()='Next']]");
-  if (btn) btn.click();
+  await humanClickNext();
+
+  const hasError = await awaitNavigationOrError([hasPasswordError]);
+  if (hasError) {
+    log("Detected password strength error. Needs to be handled or restarted.");
+    return false; 
+  }
+
   return true;
 }

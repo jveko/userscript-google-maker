@@ -35,6 +35,7 @@ export const STATE = {
   CONFIRMING: "CONFIRMING",
   ACCEPTING_TERMS: "ACCEPTING_TERMS",
   COMPLETED: "COMPLETED",
+  ERROR: "ERROR",
 };
 
 export const TAG = "[GoogleAccounts]";

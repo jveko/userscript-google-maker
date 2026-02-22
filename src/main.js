@@ -64,7 +64,10 @@ if (
     const handler = route ? route.handler() : handleSignInPage();
 
     if (handler && typeof handler.catch === "function") {
-      handler.catch((err) => log("Handler error:", err));
+      handler.catch((err) => {
+        log("Handler error:", err);
+        transition(STATE.ERROR, err.message || "Unknown error occurred");
+      });
     }
   }
 
