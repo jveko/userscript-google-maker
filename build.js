@@ -16,6 +16,9 @@ const config = {
   format: "iife",
   target: "es2017",
   banner: { js: banner },
+  define: {
+    __VERSION__: JSON.stringify(pkg.version),
+  },
 };
 
 if (watching) {

@@ -179,6 +179,17 @@ export function createStartButton(hasSession) {
     userSelect: "none"
   }, "Google Maker");
 
+  const versionSpan = createElement("span", {
+    fontSize: "10px",
+    color: "#80868b",
+    fontWeight: "600",
+    marginLeft: "4px",
+    padding: "2px 4px",
+    background: isDark ? "#3c4043" : "#f1f3f4",
+    borderRadius: "4px",
+    userSelect: "none"
+  }, "v" + (typeof __VERSION__ !== "undefined" ? __VERSION__ : "dev"));
+
   const collapseBtn = createElement("button", {
     background: "none",
     border: "none",
@@ -194,6 +205,7 @@ export function createStartButton(hasSession) {
 
   titleGroup.appendChild(statusIndicator);
   titleGroup.appendChild(title);
+  titleGroup.appendChild(versionSpan);
   header.appendChild(titleGroup);
   header.appendChild(collapseBtn);
   panel.appendChild(header);
