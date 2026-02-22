@@ -1,15 +1,32 @@
-import { STATE, DELAY } from "../constants.js";
+import { STATE, DELAY, SMS_RENEW_MAX_RETRIES } from "../constants.js";
 import { log } from "../log.js";
 import { transition, getConfig, setLastPath } from "../state.js";
 import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
 import { waitFor } from "../helpers.js";
-import { apiRequestWithRetry } from "../api.js";
+import { apiRequest, apiRequestWithRetry } from "../api.js";
 import { saveSession } from "../session.js";
 
 function hasPhoneRejectionError() {
   const text = document.body.textContent;
   return text.includes("has been used too many times") ||
     text.includes("cannot be used for verification");
+}
+
+async function renewWithPolling(email) {
+  for (let attempt = 0; attempt < SMS_RENEW_MAX_RETRIES; attempt++) {
+    try {
+      const data = await apiRequest("POST", "/sms/renew", { email });
+      log("Renew success:", JSON.stringify(data));
+      return data;
+    } catch (err) {
+      if (err.status === 429 && err.body && err.body.waitSeconds) {
+        log("Renew too early, retrying immediately, attempt", attempt + 1);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("Renew failed after " + SMS_RENEW_MAX_RETRIES + " attempts");
 }
 
 export async function handlePhoneVerificationPage() {
@@ -28,10 +45,7 @@ export async function handlePhoneVerificationPage() {
         : "Returning to phone page, renewing number",
     );
     try {
-      const renewData = await apiRequestWithRetry("POST", "/sms/renew", {
-        email: config.email,
-      });
-      log("Renew response:", JSON.stringify(renewData));
+      const renewData = await renewWithPolling(config.email);
       config.phoneNumber = renewData.phoneNumber;
       saveSession();
     } catch (err) {
