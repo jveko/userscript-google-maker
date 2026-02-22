@@ -5,33 +5,70 @@ import { saveSession } from "./session.js";
 
 function apiRequest(method, path, body) {
   return new Promise((resolve, reject) => {
+    let hasResolved = false;
+
+    // Failsafe timeout in case GM_xmlhttpRequest silently hangs in Stay Safari
+    const failsafeTimeout = setTimeout(() => {
+      if (!hasResolved) {
+        hasResolved = true;
+        reject(new Error("API timeout (Failsafe)"));
+      }
+    }, API_TIMEOUT + 5000);
+
+    const finish = () => {
+      if (!hasResolved) {
+        hasResolved = true;
+        clearTimeout(failsafeTimeout);
+        return true;
+      }
+      return false;
+    };
+
     const opts = {
       method,
       url: API_BASE + path,
       headers: { "Content-Type": "application/json" },
       timeout: API_TIMEOUT,
       onload: (res) => {
-        let body;
-        try { body = JSON.parse(res.responseText); } catch (_) { body = null; }
+        if (!finish()) return;
+        let resBody;
+        try { resBody = JSON.parse(res.responseText); } catch (_) { resBody = null; }
         if (res.status < 200 || res.status >= 300) {
           log("API HTTP error:", res.status, res.statusText);
           const err = new Error("HTTP " + res.status);
           err.status = res.status;
-          err.body = body;
+          err.body = resBody;
           reject(err);
           return;
         }
-        if (body !== null) {
-          resolve(body);
+        if (resBody !== null) {
+          resolve(resBody);
         } else {
           reject(new Error("Invalid JSON response"));
         }
       },
-      onerror: (err) => reject(err),
-      ontimeout: () => reject(new Error("Request timed out")),
+      onerror: (err) => {
+        if (!finish()) return;
+        reject(new Error(err?.error || "Network error (onerror fired)"));
+      },
+      ontimeout: () => {
+        if (!finish()) return;
+        reject(new Error("Request timed out (ontimeout fired)"));
+      },
+      onabort: () => {
+        if (!finish()) return;
+        reject(new Error("Request aborted"));
+      }
     };
     if (body) opts.data = JSON.stringify(body);
-    GM_xmlhttpRequest(opts);
+    
+    try {
+      GM_xmlhttpRequest(opts);
+    } catch (e) {
+      if (finish()) {
+        reject(new Error("GM_xmlhttpRequest failed to execute: " + e.message));
+      }
+    }
   });
 }
 
