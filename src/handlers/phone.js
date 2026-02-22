@@ -1,32 +1,15 @@
-import { STATE, DELAY, SMS_RENEW_MAX_RETRIES } from "../constants.js";
+import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig, setLastPath } from "../state.js";
+import { transition, getConfig } from "../state.js";
 import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
 import { waitFor } from "../helpers.js";
-import { apiRequest, apiRequestWithRetry } from "../api.js";
+import { apiRequestWithRetry } from "../api.js";
 import { saveSession } from "../session.js";
 
 function hasPhoneRejectionError() {
   const text = document.body.textContent;
   return text.includes("has been used too many times") ||
     text.includes("cannot be used for verification");
-}
-
-async function renewWithPolling(email) {
-  for (let attempt = 0; attempt < SMS_RENEW_MAX_RETRIES; attempt++) {
-    try {
-      const data = await apiRequest("POST", "/sms/renew", { email });
-      log("Renew success:", JSON.stringify(data));
-      return data;
-    } catch (err) {
-      if (err.status === 429 && err.body && err.body.waitSeconds) {
-        log("Renew too early, retrying immediately, attempt", attempt + 1);
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error("Renew failed after " + SMS_RENEW_MAX_RETRIES + " attempts");
 }
 
 export async function handlePhoneVerificationPage() {
@@ -45,11 +28,14 @@ export async function handlePhoneVerificationPage() {
         : "Returning to phone page, renewing number",
     );
     try {
-      const renewData = await renewWithPolling(config.email);
+      const renewData = await apiRequestWithRetry("POST", "/sms/renew", {
+        id: config.id,
+      });
+      log("Renew success:", JSON.stringify(renewData));
       config.phoneNumber = renewData.phoneNumber;
       saveSession();
     } catch (err) {
-      log("Renew error after retries:", err);
+      log("Renew error:", err);
       return false;
     }
     await humanDelay(1000, 2000);
@@ -57,7 +43,7 @@ export async function handlePhoneVerificationPage() {
     let data;
     try {
       data = await apiRequestWithRetry("POST", "/sms/request", {
-        email: config.email,
+        id: config.id,
       });
     } catch (err) {
       log("SMS request error after retries:", err);
@@ -71,13 +57,28 @@ export async function handlePhoneVerificationPage() {
   await humanScroll();
   await humanDelay(1000, 3000);
 
+  const phoneInput = document.querySelector("#phoneNumberId");
+  if (phoneInput && phoneInput.value) {
+    phoneInput.focus();
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      Object.getPrototypeOf(phoneInput), "value"
+    )?.set;
+    if (nativeSetter) {
+      nativeSetter.call(phoneInput, "");
+    } else {
+      phoneInput.value = "";
+    }
+    phoneInput.dispatchEvent(new Event("input", { bubbles: true }));
+    phoneInput.dispatchEvent(new Event("change", { bubbles: true }));
+    await humanDelay(500, 1000);
+  }
+
   await humanFillInput("#phoneNumberId", config.phoneNumber);
   await humanClickNext();
 
   setTimeout(() => {
     if (hasPhoneRejectionError()) {
       log("Detected 'too many times' error after submit, re-running handler");
-      setLastPath("");
       handlePhoneVerificationPage().catch((e) =>
         log("Re-run handler error:", e),
       );

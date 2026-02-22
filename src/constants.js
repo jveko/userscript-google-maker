@@ -9,7 +9,6 @@ export const API_MAX_RETRIES = 3;
 export const API_RETRY_BASE_MS = 1000;
 export const SMS_POLL_INTERVAL = 3000;
 export const SMS_TIMEOUT = 90000;
-export const SMS_RENEW_MAX_RETRIES = 10;
 
 export const DELAY = {
   TINY: [30, 80],

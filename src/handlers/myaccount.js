@@ -10,11 +10,11 @@ export async function handleMyAccountPage() {
   try {
     const data = await apiRequestWithRetry(
       "PATCH",
-      "/confirm/" + encodeURIComponent(getConfig().email),
+      "/confirm/" + encodeURIComponent(getConfig().id),
     );
     log("Confirm response:", JSON.stringify(data));
-    clearSession();
   } catch (err) {
     log("Confirm error:", err);
   }
+  clearSession();
 }

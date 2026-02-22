@@ -31,7 +31,7 @@ export async function handleSmsCodePage() {
       return;
     }
 
-    apiRequest("GET", "/sms/poll/" + encodeURIComponent(getConfig().email))
+    apiRequest("GET", "/sms/poll/" + encodeURIComponent(getConfig().id))
       .then(async (data) => {
         log("Poll response:", JSON.stringify(data));
         if (data.status === "received" && data.code) {
