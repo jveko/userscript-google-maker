@@ -5,22 +5,22 @@ Modular Tampermonkey userscript that automates Google account signup flow with S
 
 ## Architecture
 - **Modular source** (`src/`) → esbuild bundles → `dist/google-accounts.user.js`
-- **Cloudflare Worker API** (`api-google-maker.cloudflare-5e0.workers.dev`) for profile generation, SMS handling, and account confirmation
+- **Cloudflare Worker API** (`api-google-maker.cloudflare-5e0.workers.dev`) for profile generation, SMS handling, and account confirmation (with 35s native timeout failsafes)
 - **Session persistence** via `GM_setValue`/`GM_getValue` (cross-origin, persists across `accounts.google.com` ↔ `myaccount.google.com`)
 - **URL polling** (`setInterval`) detects page changes and dispatches to async page handlers
-- **Human-like simulation** layer (typing, delays, scrolling, Shadow DOM composed events, React native setters) for anti-detection
+- **Human-like simulation** layer (fast randomized typing with typos, delays, dynamic scrolling containers, iOS native TouchEvent/PointerEvent simulation, Shadow DOM composed events, React native setters) for advanced anti-detection.
 - **Stay iOS Extension Compatible** (Uses `setInterval` polling instead of `onurlchange`, plain parsed `GM_xmlhttpRequest`)
 
 ## Source Structure
 ```
 src/
-  main.js              — entry point, route table, init logic
-  constants.js          — MONTH_NAMES, API_BASE, DELAY, STATE, etc.
-  state.js              — mutable shared state (config, currentState, smsPoller)
-  log.js                — log panel + log() function
+  main.js              — entry point, route table, error bubbling, init logic
+  constants.js          — MONTH_NAMES, API_BASE, DELAY (optimized for speed), STATE, etc.
+  state.js              — mutable shared state (config, currentState, lastErrorMsg, smsPoller)
+  log.js                — DOM log panel + log() function
   session.js            — GM_setValue/GM_getValue persistence
-  api.js                — apiRequest, apiRequestWithRetry, fetchConfig
-  human.js              — humanDelay, humanType, humanScroll, etc. (uses React native setter bypass)
+  api.js                — apiRequest (with Failsafe timer), apiRequestWithRetry, fetchConfig
+  human.js              — simulateMobileTouch, humanDelay, humanType, humanScroll, etc. (uses React native setter bypass)
   helpers.js            — waitFor (MutationObserver + visibility), awaitNavigationOrError, getElementByXpath
   sms.js                — SMS poller management
   handlers/
@@ -28,7 +28,7 @@ src/
     phone.js, sms-code.js, recovery.js, confirmation.js, terms.js,
     myaccount.js
   ui/
-    panel.js            — floating control panel (start/clear buttons)
+    panel.js            — floating Draggable control panel (Start/Stop/Reset, Status Monitor, Version Badge)
   banner.txt            — userscript header template (`{{VERSION}}` is replaced by esbuild)
 ```
 
