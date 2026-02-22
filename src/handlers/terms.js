@@ -82,22 +82,22 @@ async function handlePrivacySettings() {
 export async function handleTermsPage() {
   transition(STATE.ACCEPTING_TERMS);
   log("→ handleTermsPage");
-  await humanDelay(1000, 2000);
+  await humanDelay(400, 800);
 
   await handlePrivacySettings();
-  await humanDelay(DELAY.MEDIUM);
+  await humanDelay(DELAY.SHORT);
 
   log("Scrolling to 'I agree' button...");
   const agreeBtn = await scrollUntilVisible("I agree");
 
   if (agreeBtn) {
-    await humanDelay(DELAY.EXTRA_LONG);
+    await humanDelay(DELAY.MEDIUM);
     log("Clicking 'I agree'");
     await humanClick(agreeBtn);
 
     // Confirm account and clear session here because myaccount.google.com
     // blocks userscript injection via CSP on iOS Safari/Stay
-    await humanDelay(3000, 5000);
+    await humanDelay(1000, 2000);
     try {
       const config = getConfig();
       const data = await apiRequestWithRetry(

@@ -11,14 +11,14 @@ export function humanDelay(minOrPreset, max) {
     return new Promise((r) => setTimeout(r, rand(minOrPreset[0], minOrPreset[1])));
   }
   return new Promise((r) =>
-    setTimeout(r, rand(minOrPreset || 800, max || 2500)),
+    setTimeout(r, rand(minOrPreset || 200, max || 800)),
   );
 }
 
 export function humanScroll() {
   const amount = rand(-30, 60);
   window.scrollBy({ top: amount, behavior: "smooth" });
-  return humanDelay(DELAY.SHORT);
+  return humanDelay(DELAY.TINY);
 }
 
 export function humanFocus(el) {
@@ -68,7 +68,7 @@ export async function humanType(el, text) {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
 
-    if (char.match(/[a-zA-Z]/) && Math.random() < 0.08) {
+    if (char.match(/[a-zA-Z]/) && Math.random() < 0.04) {
       const typo = String.fromCharCode(char.charCodeAt(0) + rand(-2, 2));
       setNativeValue(el, el.value + typo);
       fireKeyEvents(el, typo);

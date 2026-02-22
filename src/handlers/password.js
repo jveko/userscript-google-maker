@@ -18,7 +18,7 @@ export async function handlePasswordPage() {
   await humanDelay(DELAY.MEDIUM);
   const config = getConfig();
   await humanFillInput('input[name="Passwd"]', config.password);
-  await humanDelay(400, 1000);
+  await humanDelay(200, 500);
   await humanFillInput('input[name="PasswdAgain"]', config.password);
 
   await humanClickNext();

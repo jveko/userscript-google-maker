@@ -98,7 +98,7 @@ if (
     tryLoadSessionAndConfirm().catch((err) => log("myaccount init error:", err));
   } else {
     const hasSession = loadSession();
-    setInterval(detectAndRun, 1000);
+    setInterval(detectAndRun, 400);
     if (hasSession) {
       transition(STATE.SIGNING_IN);
       log("Resuming from session");

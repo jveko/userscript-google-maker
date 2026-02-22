@@ -11,14 +11,14 @@ export const SMS_POLL_INTERVAL = 3000;
 export const SMS_TIMEOUT = 90000;
 
 export const DELAY = {
-  TINY: [30, 80],
-  SHORT: [200, 500],
-  MEDIUM: [500, 1500],
-  LONG: [800, 2000],
-  EXTRA_LONG: [1500, 4000],
-  TYPING: [50, 150],
-  TYPING_PAUSE: [300, 700],
-  BACKSPACE: [80, 200],
+  TINY: [15, 40],
+  SHORT: [100, 250],
+  MEDIUM: [250, 600],
+  LONG: [400, 800],
+  EXTRA_LONG: [800, 1500],
+  TYPING: [30, 80],
+  TYPING_PAUSE: [150, 300],
+  BACKSPACE: [40, 90],
 };
 
 export const STATE = {

@@ -11,9 +11,9 @@ export async function handleSignInPage() {
   const btn = getElementByXpath("//button[.//span[text()='Create account']]");
   log("Create account btn:", btn ? "✓" : "✗");
   if (!btn) return false;
-  await humanDelay(1000, 3000);
+  await humanDelay(400, 1000);
   btn.click();
-  await humanDelay(DELAY.MEDIUM);
+  await humanDelay(DELAY.SHORT);
   const option = getElementByXpath(
     "//li[.//span[text()='For my personal use']]",
   );
