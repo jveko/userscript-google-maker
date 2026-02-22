@@ -271,8 +271,8 @@ export function createStartButton(hasSession) {
       }
     }
     
-    // Auto-sync UI buttons if state hits ERROR
-    if (st === STATE.ERROR && startBtn.style.display === "none") {
+    // Auto-sync UI buttons if state hits ERROR or COMPLETED
+    if ((st === STATE.ERROR || st === STATE.COMPLETED) && startBtn.style.display === "none") {
       updateActionVisibility(false);
     }
   }, 1000);

@@ -17,9 +17,19 @@ function findButtonByText(text, exact = true) {
 function scrollUntilVisible(buttonText, maxAttempts = 60) {
   return new Promise((resolve) => {
     let attempts = 0;
+    
+    // Some Google pages put the scrollbar on a div inside the body, not the window itself
+    const getScrollContainers = () => [
+      document.querySelector('div[role="main"]'),
+      document.querySelector('#yDmH0d'),
+      document.querySelector('c-wiz'),
+      document.scrollingElement,
+      window
+    ].filter(Boolean);
+
     const interval = setInterval(() => {
       const btn = findButtonByText(buttonText);
-      if (btn && btn.offsetParent !== null) {
+      if (btn && btn.offsetParent !== null && btn.offsetHeight > 0) {
         clearInterval(interval);
         log("Button visible:", buttonText);
         resolve(btn);
@@ -31,7 +41,17 @@ function scrollUntilVisible(buttonText, maxAttempts = 60) {
         resolve(null);
         return;
       }
-      window.scrollBy(0, 500);
+      
+      const containers = getScrollContainers();
+      for (const container of containers) {
+        if (container === window) {
+          window.scrollBy({ top: rand(300, 600), behavior: "smooth" });
+        } else {
+          try {
+            container.scrollBy({ top: rand(300, 600), behavior: "smooth" });
+          } catch(e) {}
+        }
+      }
     }, rand(400, 800));
   });
 }
