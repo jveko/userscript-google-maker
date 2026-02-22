@@ -1,11 +1,15 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig, setLastPath } from "../state.js";
+import { transition, getConfig, setConfig, setLastPath } from "../state.js";
 import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
 import { waitFor, getElementByXpath } from "../helpers.js";
-import { clearSession } from "../session.js";
+import { clearSession, saveSession } from "../session.js";
+import { regenerateEmail } from "../api.js";
 
-function checkUsernameTaken() {
+const MAX_EMAIL_RETRIES = 3;
+let emailRetryCount = 0;
+
+async function handleUsernameTaken() {
   const bodyText = document.body.innerText;
   const isTaken = bodyText.includes("That username is taken");
   const isAlreadyUsed =
@@ -33,11 +37,39 @@ function checkUsernameTaken() {
     }
   }
 
-  log("Username/email unavailable, clearing session and restarting");
-  clearSession();
-  transition(STATE.IDLE);
-  setLastPath("");
-  window.location.href = "https://accounts.google.com/AddSession";
+  emailRetryCount++;
+  if (emailRetryCount > MAX_EMAIL_RETRIES) {
+    log("Email retry limit reached (" + MAX_EMAIL_RETRIES + "), clearing session");
+    emailRetryCount = 0;
+    clearSession();
+    transition(STATE.IDLE);
+    setLastPath("");
+    window.location.href = "https://accounts.google.com/AddSession";
+    return true;
+  }
+
+  const config = getConfig();
+  log("Username taken, regenerating email (attempt " + emailRetryCount + "/" + MAX_EMAIL_RETRIES + ")");
+
+  try {
+    const data = await regenerateEmail(config.id);
+    log("New email: " + data.email + " (old: " + data.oldEmail + ")");
+    config.email = data.email;
+    config.username = data.email.split("@")[0];
+    setConfig(config);
+    saveSession();
+
+    await humanDelay(DELAY.MEDIUM);
+    await humanFillInput('input[name="Username"]', config.username);
+    await humanClickNext();
+  } catch (err) {
+    log("Email regeneration failed:", err.message || err);
+    clearSession();
+    transition(STATE.IDLE);
+    setLastPath("");
+    window.location.href = "https://accounts.google.com/AddSession";
+  }
+
   return true;
 }
 
@@ -45,7 +77,7 @@ export async function handleUsernamePage() {
   transition(STATE.FILLING_USERNAME);
   log("→ handleUsernamePage");
 
-  if (checkUsernameTaken()) return true;
+  if (await handleUsernameTaken()) return true;
 
   await waitFor('input[name="usernameRadio"], input[name="Username"]');
   await humanScroll();
