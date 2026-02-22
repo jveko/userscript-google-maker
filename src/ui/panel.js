@@ -3,6 +3,7 @@ import { log } from "../log.js";
 import { transition, getState, getConfig, setLastPath, getLastErrorMsg } from "../state.js";
 import { stopSmsPoller } from "../sms.js";
 import { clearSession, startNewSession, getSettings, saveSettings } from "../session.js";
+import { createIsolatedContainer } from "../helpers.js";
 
 // --- Drag & Drop Utility ---
 
@@ -245,11 +246,12 @@ export function createStartButton(hasSession) {
   
   // Update loop for stats
   setInterval(() => {
-    const stateEl = document.getElementById("gah-stat-state");
-    const emailEl = document.getElementById("gah-stat-email");
-    const phoneEl = document.getElementById("gah-stat-phone");
-    const errEl = document.getElementById("gah-stat-error");
-    const dotEl = document.getElementById("gah-status-dot");
+    // Inside a closed shadow root, we must query the panel element itself
+    const stateEl = panel.querySelector("#gah-stat-state");
+    const emailEl = panel.querySelector("#gah-stat-email");
+    const phoneEl = panel.querySelector("#gah-stat-phone");
+    const errEl = panel.querySelector("#gah-stat-error");
+    const dotEl = panel.querySelector("#gah-status-dot");
     const cfg = getConfig();
     const st = getState();
     const errMsg = getLastErrorMsg();
@@ -412,7 +414,11 @@ export function createStartButton(hasSession) {
   body.appendChild(settingsRow);
   body.appendChild(actionsGroup);
   panel.appendChild(body);
-  document.body.appendChild(panel);
+  
+  // Create an isolated, closed shadow root so the page JS cannot inspect our UI
+  const { shadow } = createIsolatedContainer("gah-panel-container");
+  panel.style.pointerEvents = "auto"; // Re-enable pointer events for the panel itself inside the invisible host
+  shadow.appendChild(panel);
 
   // Logic
   updateActionVisibility(hasSession);

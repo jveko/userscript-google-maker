@@ -1,5 +1,22 @@
 import { log } from "./log.js";
 
+export function createIsolatedContainer(id) {
+  const host = document.createElement("div");
+  // Use a completely random ID to avoid simple querySelector detection
+  host.id = id || "ext-" + Math.random().toString(36).substr(2, 9);
+  
+  // Position the host element out of standard layout flow but ensure it spans the viewport
+  host.style.cssText = "position:fixed; top:0; left:0; width:0; height:0; z-index:2147483647; overflow:visible; pointer-events:none;";
+  
+  document.documentElement.appendChild(host);
+  
+  // Create a CLOSED shadow root. 
+  // This means `host.shadowRoot` will return null to page scripts.
+  const shadow = host.attachShadow({ mode: "closed" });
+  
+  return { host, shadow };
+}
+
 export function getElementByXpath(path) {
   return document.evaluate(
     path,

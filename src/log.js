@@ -1,4 +1,5 @@
 import { TAG } from "./constants.js";
+import { createIsolatedContainer } from "./helpers.js";
 
 let logPanel = null;
 
@@ -8,8 +9,10 @@ function createLogPanel() {
     "position:fixed;bottom:0;left:0;right:0;z-index:99999;" +
     "max-height:12vh;overflow-y:auto;background:rgba(0,0,0,0.85);" +
     "color:#0f0;font-family:monospace;font-size:11px;padding:8px;" +
-    "border-top:2px solid #333;display:none;";
-  document.body.appendChild(logPanel);
+    "border-top:2px solid #333;display:none;pointer-events:auto;";
+    
+  const { shadow } = createIsolatedContainer("gah-log-container");
+  shadow.appendChild(logPanel);
 }
 
 export function log(...args) {
