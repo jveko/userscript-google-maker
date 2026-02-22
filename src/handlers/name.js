@@ -22,8 +22,8 @@ export async function handleNamePage() {
       await fetchConfig();
       log("Config loaded:", getConfig().email);
     } catch (err) {
-      log("Config fetch failed:", err);
-      return false;
+      log("Config fetch failed:", err.message || err);
+      throw new Error("Failed to fetch config: " + (err.message || "Network Error"));
     }
   }
 
