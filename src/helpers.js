@@ -27,7 +27,7 @@ export function getElementByXpath(path) {
   ).singleNodeValue;
 }
 
-export function awaitNavigationOrError(errorChecks, { staleChecks = [] } = {}) {
+export function awaitNavigationOrError(errorChecks, { timeout = 20000, staleChecks = [] } = {}) {
   return new Promise((resolve) => {
     const startPath = window.location.pathname;
     
@@ -45,6 +45,7 @@ export function awaitNavigationOrError(errorChecks, { staleChecks = [] } = {}) {
     const settle = (value) => {
       observer.disconnect();
       clearInterval(interval);
+      clearTimeout(timer);
       resolve(value);
     };
 
@@ -57,6 +58,8 @@ export function awaitNavigationOrError(errorChecks, { staleChecks = [] } = {}) {
 
     const observer = new MutationObserver(tick);
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+    const timer = setTimeout(() => settle(null), timeout);
   });
 }
 
