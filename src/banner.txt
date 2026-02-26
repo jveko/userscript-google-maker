@@ -13,6 +13,6 @@
 // @grant        GM_getValue
 // @grant        GM_deleteValue
 // @connect      api-google-maker.cloudflare-5e0.workers.dev
-// @run-at       document-idle
+// @run-at       document-end
 // @noframes
 // ==/UserScript==
