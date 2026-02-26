@@ -41,6 +41,7 @@ export function isHandlerInFlight() { return handlerInFlight; }
 export function setHandlerInFlight(v) { handlerInFlight = v; }
 
 export function transition(state, errorMsg = "") {
+  if (state === currentState) return;
   const allowed = ALLOWED[currentState] || [];
   if (state !== STATE.ERROR && !allowed.includes(state)) {
     log.error("Invalid transition:", currentState, "→", state);
