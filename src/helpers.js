@@ -72,19 +72,20 @@ export function waitFor(selector, timeout) {
       return resolve(el);
     }
 
+    const timer = setTimeout(() => {
+      observer.disconnect();
+      log.warn("waitFor: TIMEOUT", selector);
+      reject(new Error("Timeout waiting for " + selector));
+    }, timeout || 10000);
+
     const observer = new MutationObserver(() => {
       const el = document.querySelector(selector);
       if (el && isVisible(el)) {
+        clearTimeout(timer);
         observer.disconnect();
         resolve(el);
       }
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
-
-    setTimeout(() => {
-      observer.disconnect();
-      log.warn("waitFor: TIMEOUT", selector);
-      reject(new Error("Timeout waiting for " + selector));
-    }, timeout || 10000);
   });
 }
