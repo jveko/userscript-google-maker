@@ -29,7 +29,9 @@ export async function handleBirthdayGenderPage() {
 
   await humanClickNext();
 
-  const hasError = await awaitNavigationOrError([hasBirthdayError]);
+  const hasError = await awaitNavigationOrError([hasBirthdayError], {
+    staleChecks: [() => { const el = document.querySelector("#day"); return el && el.value === ""; }]
+  });
   if (hasError === true) {
     log.warn("Detected birthday/age requirement error.");
     return false;

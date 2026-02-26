@@ -35,7 +35,9 @@ export async function handleNamePage() {
   await humanFillInput("#lastName", getConfig().lastName);
   await humanClickNext();
 
-  const hasError = await awaitNavigationOrError([hasNameError]);
+  const hasError = await awaitNavigationOrError([hasNameError], {
+    staleChecks: [() => { const el = document.querySelector("#firstName"); return el && el.value === ""; }]
+  });
   if (hasError === true) {
     log.warn("Detected name validation error.");
     return false;

@@ -77,7 +77,9 @@ async function handleUsernameTaken() {
 }
 
 async function handleUsernameErrorPostClick() {
-  const hasError = await awaitNavigationOrError([hasUsernameError]);
+  const hasError = await awaitNavigationOrError([hasUsernameError], {
+    staleChecks: [() => { const el = document.querySelector('input[name="Username"]'); return el && el.value === ""; }]
+  });
   if (hasError === true) {
     log.warn("Detected username error after submit, handling");
     return await handleUsernameTaken();

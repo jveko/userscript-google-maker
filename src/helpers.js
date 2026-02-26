@@ -27,7 +27,7 @@ export function getElementByXpath(path) {
   ).singleNodeValue;
 }
 
-export function awaitNavigationOrError(errorChecks, timeout = 15000) {
+export function awaitNavigationOrError(errorChecks, { timeout = 15000, staleChecks = [] } = {}) {
   return new Promise((resolve) => {
     const startPath = window.location.pathname;
     
@@ -36,7 +36,10 @@ export function awaitNavigationOrError(errorChecks, timeout = 15000) {
       for (const check of errorChecks) {
         if (check()) return true;
       }
-      return null;
+      for (const check of staleChecks) {
+        if (check()) return null;
+      }
+      return undefined;
     };
 
     const cleanup = () => {
@@ -45,22 +48,19 @@ export function awaitNavigationOrError(errorChecks, timeout = 15000) {
       clearTimeout(timer);
     };
 
-    const interval = setInterval(() => {
-      const state = checkState();
-      if (state !== null) {
-        cleanup();
-        resolve(state);
-      }
-    }, 500);
+    const settle = (value) => {
+      cleanup();
+      resolve(value);
+    };
 
-    const observer = new MutationObserver(() => {
+    const tick = () => {
       const state = checkState();
-      if (state !== null) {
-        cleanup();
-        resolve(state);
-      }
-    });
-    
+      if (state !== undefined) settle(state);
+    };
+
+    const interval = setInterval(tick, 500);
+
+    const observer = new MutationObserver(tick);
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
     const timer = setTimeout(() => {

@@ -23,7 +23,9 @@ export async function handlePasswordPage() {
 
   await humanClickNext();
 
-  const hasError = await awaitNavigationOrError([hasPasswordError]);
+  const hasError = await awaitNavigationOrError([hasPasswordError], {
+    staleChecks: [() => { const el = document.querySelector('input[name="Passwd"]'); return el && el.value === ""; }]
+  });
   if (hasError === true) {
     log.warn("Detected password strength error. Needs to be handled or restarted.");
     return false; 
