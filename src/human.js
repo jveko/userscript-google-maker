@@ -105,7 +105,6 @@ export async function humanType(el, text) {
 
 export async function humanFillInput(selector, value) {
   const el = document.querySelector(selector);
-  log("humanFillInput:", selector, "→", value, el ? "✓" : "✗");
   if (el) {
     await humanType(el, value);
   }
@@ -181,11 +180,9 @@ export async function humanClickNext() {
 
 export async function humanSelectDropdown(containerSelector, optionText) {
   const container = document.querySelector(containerSelector);
-  log("selectDropdown:", containerSelector, container ? "✓" : "✗");
   if (!container) return;
 
   const trigger = container.querySelector('[role="combobox"]');
-  log("selectDropdown trigger:", trigger ? "✓" : "✗");
   if (!trigger) return;
 
   await humanDelay(DELAY.MEDIUM);
@@ -195,9 +192,6 @@ export async function humanSelectDropdown(containerSelector, optionText) {
   let options = container.querySelectorAll('li[role="option"]');
   if (options.length === 0) {
     options = document.querySelectorAll('li[role="option"]');
-    log("selectDropdown: using global options, count:", options.length);
-  } else {
-    log("selectDropdown: using container options, count:", options.length);
   }
 
   for (const opt of options) {
@@ -205,9 +199,8 @@ export async function humanSelectDropdown(containerSelector, optionText) {
       // simulate scanning the list
       await humanDelay(DELAY.MEDIUM);
       await simulateMobileTouch(opt);
-      log("selectDropdown: clicked", optionText);
       return;
     }
   }
-  log("selectDropdown: NOT FOUND", optionText);
+  log.warn("selectDropdown: option not found:", optionText);
 }

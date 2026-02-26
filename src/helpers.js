@@ -62,13 +62,11 @@ export function awaitNavigationOrError(errorChecks) {
 }
 
 export function waitFor(selector, timeout) {
-  log("waitFor:", selector);
   return new Promise((resolve, reject) => {
     const isVisible = (el) => el.offsetWidth > 0 || el.offsetHeight > 0;
 
     const el = document.querySelector(selector);
     if (el && isVisible(el)) {
-      log("waitFor: found immediately", selector);
       return resolve(el);
     }
 
@@ -76,7 +74,6 @@ export function waitFor(selector, timeout) {
       const el = document.querySelector(selector);
       if (el && isVisible(el)) {
         observer.disconnect();
-        log("waitFor: found via observer", selector);
         resolve(el);
       }
     });
@@ -84,7 +81,7 @@ export function waitFor(selector, timeout) {
 
     setTimeout(() => {
       observer.disconnect();
-      log("waitFor: TIMEOUT", selector);
+      log.warn("waitFor: TIMEOUT", selector);
       reject(new Error("Timeout waiting for " + selector));
     }, timeout || 10000);
   });
