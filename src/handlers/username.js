@@ -1,6 +1,6 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig, setConfig, setLastPath } from "../state.js";
+import { transition, getConfig, setConfig } from "../state.js";
 import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
 import { waitFor, awaitNavigationOrError } from "../helpers.js";
 import { clearSession, saveSession } from "../session.js";
@@ -45,7 +45,6 @@ async function handleUsernameTaken() {
     emailRetryCount = 0;
     clearSession();
     transition(STATE.IDLE);
-    setLastPath("");
     window.location.href = "https://accounts.google.com/AddSession";
     return true;
   }
@@ -69,7 +68,6 @@ async function handleUsernameTaken() {
     log.error("Email regeneration failed:", err.message || err);
     clearSession();
     transition(STATE.IDLE);
-    setLastPath("");
     window.location.href = "https://accounts.google.com/AddSession";
   }
 
@@ -77,16 +75,10 @@ async function handleUsernameTaken() {
 }
 
 async function handleUsernameErrorPostClick() {
-  const hasError = await awaitNavigationOrError([hasUsernameError], {
-    staleChecks: [() => { const el = document.querySelector('input[name="Username"]'); return el && el.value === ""; }]
-  });
+  const hasError = await awaitNavigationOrError([hasUsernameError]);
   if (hasError === true) {
     log.warn("Detected username error after submit, handling");
     return await handleUsernameTaken();
-  }
-  if (hasError === null) {
-    log.warn("Page did not navigate after username submit, allowing re-detection");
-    setLastPath("");
   }
   return true;
 }

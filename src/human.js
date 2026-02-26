@@ -106,6 +106,7 @@ export async function humanType(el, text) {
 export async function humanFillInput(selector, value) {
   const el = document.querySelector(selector);
   if (el) {
+    if (el.value === value) return el;
     await humanType(el, value);
   }
   return el;

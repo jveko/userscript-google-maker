@@ -1,6 +1,6 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig, setLastPath } from "../state.js";
+import { transition, getConfig } from "../state.js";
 import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
 import { waitFor, awaitNavigationOrError } from "../helpers.js";
 import { fetchConfig } from "../api.js";
@@ -35,16 +35,10 @@ export async function handleNamePage() {
   await humanFillInput("#lastName", getConfig().lastName);
   await humanClickNext();
 
-  const hasError = await awaitNavigationOrError([hasNameError], {
-    staleChecks: [() => { const el = document.querySelector("#firstName"); return el && el.value === ""; }]
-  });
+  const hasError = await awaitNavigationOrError([hasNameError]);
   if (hasError === true) {
     log.warn("Detected name validation error.");
     return false;
-  }
-  if (hasError === null) {
-    log.warn("Page did not navigate after name submit, allowing re-detection");
-    setLastPath("");
   }
 
   return true;

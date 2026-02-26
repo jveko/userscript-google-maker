@@ -1,4 +1,5 @@
 import { log } from "./log.js";
+import { setSubmitLock, clearSubmitLock } from "./state.js";
 
 export function createIsolatedContainer(id) {
   const host = document.createElement("div");
@@ -27,7 +28,8 @@ export function getElementByXpath(path) {
   ).singleNodeValue;
 }
 
-export function awaitNavigationOrError(errorChecks, { timeout = 20000, staleChecks = [] } = {}) {
+export function awaitNavigationOrError(errorChecks, { timeout = 5000, lockMs = 15000 } = {}) {
+  setSubmitLock(lockMs);
   return new Promise((resolve) => {
     const startPath = window.location.pathname;
     
@@ -36,9 +38,6 @@ export function awaitNavigationOrError(errorChecks, { timeout = 20000, staleChec
       for (const check of errorChecks) {
         if (check()) return true;
       }
-      for (const check of staleChecks) {
-        if (check()) return null;
-      }
       return undefined;
     };
 
@@ -46,6 +45,7 @@ export function awaitNavigationOrError(errorChecks, { timeout = 20000, staleChec
       observer.disconnect();
       clearInterval(interval);
       clearTimeout(timer);
+      if (value !== null) clearSubmitLock();
       resolve(value);
     };
 

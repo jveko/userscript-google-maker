@@ -1,6 +1,6 @@
 import { STATE, DELAY, SMS_POLL_INTERVAL, SMS_TIMEOUT } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getState, getConfig, setSmsPoller, setLastPath } from "../state.js";
+import { transition, getState, getConfig, setSmsPoller } from "../state.js";
 import { humanDelay, humanFillInput, humanClickNext } from "../human.js";
 import { waitFor, getElementByXpath } from "../helpers.js";
 import { apiRequest } from "../api.js";
@@ -30,7 +30,6 @@ export async function handleSmsCodePage() {
       );
       if (resendBtn) {
         resendBtn.click();
-        setLastPath("");
       }
       return true;
     }

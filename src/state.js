@@ -28,6 +28,7 @@ let smsPoller = null;
 let lastPath = "";
 let lastErrorMsg = "";
 let handlerInFlight = false;
+let submitLockUntil = 0;
 
 export function getState() { return currentState; }
 export function getLastErrorMsg() { return lastErrorMsg; }
@@ -39,6 +40,9 @@ export function getLastPath() { return lastPath; }
 export function setLastPath(p) { lastPath = p; }
 export function isHandlerInFlight() { return handlerInFlight; }
 export function setHandlerInFlight(v) { handlerInFlight = v; }
+export function setSubmitLock(ms) { submitLockUntil = Date.now() + ms; }
+export function isSubmitLocked() { return Date.now() < submitLockUntil; }
+export function clearSubmitLock() { submitLockUntil = 0; }
 
 export function transition(state, errorMsg = "") {
   if (state === currentState) return;

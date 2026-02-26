@@ -2,7 +2,7 @@
 
 import { TAG, STATE, SESSION_KEY } from "./constants.js";
 import { log } from "./log.js";
-import { transition, getState, getLastPath, setLastPath, isHandlerInFlight, setHandlerInFlight } from "./state.js";
+import { transition, getState, getLastPath, setLastPath, isHandlerInFlight, setHandlerInFlight, isSubmitLocked, clearSubmitLock } from "./state.js";
 import { loadSession } from "./session.js";
 import { stopSmsPoller } from "./sms.js";
 import { createStartButton } from "./ui/panel.js";
@@ -23,6 +23,7 @@ import { handleRecoveryVerifyPage } from "./handlers/recovery-verify.js";
 import { handleMyAccountPage } from "./handlers/myaccount.js";
 
 const HANDLER_TIMEOUT = 120000; // 2 minutes
+const RERUN_COOLDOWN = 5000;    // 5s before retrying same-URL handler
 
 function withTimeout(promise, timeoutMs, label) {
   let t;
@@ -69,20 +70,34 @@ if (
 
   // ---- PAGE DETECTION (URL polling) ----
 
-  function detectAndRun() {
-    if (getState() === STATE.IDLE) return;
-    if (isHandlerInFlight()) return;
-    const path = window.location.pathname;
-    if (path === getLastPath()) return;
-    setLastPath(path);
-    log("URL changed:", path);
+  const lastDispatchAt = {};
 
-    if (getState() === STATE.WAITING_SMS && !path.includes("/signup/verifyphone/idv")) {
-      stopSmsPoller();
+  function detectAndRun() {
+    if (getState() === STATE.IDLE || getState() === STATE.ERROR) return;
+    if (isHandlerInFlight()) return;
+
+    const path = window.location.pathname;
+    const pathChanged = path !== getLastPath();
+
+    if (pathChanged) {
+      setLastPath(path);
+      clearSubmitLock();
+      log("URL changed:", path);
+
+      if (getState() === STATE.WAITING_SMS && !path.includes("/signup/verifyphone/idv")) {
+        stopSmsPoller();
+      }
     }
 
     const route = ROUTES.find((r) => path.includes(r.match));
-    const stepId = route ? route.match.replace(/^\//, "") : "signin";
+    const key = route ? route.match : "signin";
+
+    if (!pathChanged) {
+      if (isSubmitLocked()) return;
+      if (Date.now() - (lastDispatchAt[key] || 0) < RERUN_COOLDOWN) return;
+    }
+
+    const stepId = key.replace(/^\//, "");
     const startTime = Date.now();
 
     setHandlerInFlight(true);
@@ -109,48 +124,63 @@ if (
       })
       .finally(() => {
         setHandlerInFlight(false);
+        lastDispatchAt[key] = Date.now();
       });
   }
 
+  const lastMyAccountDispatchAt = {};
+
   function detectAndRunMyAccount() {
-    if (getState() === STATE.IDLE) return;
+    if (getState() === STATE.IDLE || getState() === STATE.ERROR) return;
     if (isHandlerInFlight()) return;
+
     const path = window.location.pathname;
-    if (path === getLastPath()) return;
-    setLastPath(path);
-    log("myaccount URL changed:", path);
+    const pathChanged = path !== getLastPath();
+
+    if (pathChanged) {
+      setLastPath(path);
+      clearSubmitLock();
+      log("myaccount URL changed:", path);
+    }
 
     const route = MYACCOUNT_ROUTES.find((r) => path.includes(r.match));
-    if (route) {
-      const stepId = route.match.replace(/^\//, "");
-      const startTime = Date.now();
+    const handler = route ? route.handler : handleMyAccountPage;
+    const key = route ? route.match : "myaccount";
 
-      setHandlerInFlight(true);
-      log.step("▶", stepId);
-
-      withTimeout(
-        Promise.resolve(route.handler()),
-        HANDLER_TIMEOUT,
-        stepId
-      )
-        .then((result) => {
-          const dur = ((Date.now() - startTime) / 1000).toFixed(1);
-          if (result === false) {
-            log.error("✗", stepId, dur + "s", "FAILED");
-            transition(STATE.ERROR, "Handler failed on " + path);
-          } else {
-            log.step("✓", stepId, dur + "s");
-          }
-        })
-        .catch((err) => {
-          const dur = ((Date.now() - startTime) / 1000).toFixed(1);
-          log.error("✗", stepId, dur + "s", err.message || "Unknown error");
-          transition(STATE.ERROR, err.message || "Unknown error occurred");
-        })
-        .finally(() => {
-          setHandlerInFlight(false);
-        });
+    if (!pathChanged) {
+      if (isSubmitLocked()) return;
+      if (Date.now() - (lastMyAccountDispatchAt[key] || 0) < RERUN_COOLDOWN) return;
     }
+
+    const stepId = key === "myaccount" ? "myaccount" : key.replace(/^\//, "");
+    const startTime = Date.now();
+
+    setHandlerInFlight(true);
+    log.step("▶", stepId);
+
+    withTimeout(
+      Promise.resolve(handler()),
+      HANDLER_TIMEOUT,
+      stepId
+    )
+      .then((result) => {
+        const dur = ((Date.now() - startTime) / 1000).toFixed(1);
+        if (result === false) {
+          log.error("✗", stepId, dur + "s", "FAILED");
+          transition(STATE.ERROR, "Handler failed on " + path);
+        } else {
+          log.step("✓", stepId, dur + "s");
+        }
+      })
+      .catch((err) => {
+        const dur = ((Date.now() - startTime) / 1000).toFixed(1);
+        log.error("✗", stepId, dur + "s", err.message || "Unknown error");
+        transition(STATE.ERROR, err.message || "Unknown error occurred");
+      })
+      .finally(() => {
+        setHandlerInFlight(false);
+        lastMyAccountDispatchAt[key] = Date.now();
+      });
   }
 
   // ---- INIT ----
@@ -166,38 +196,7 @@ if (
           log("Session found on attempt " + attempt);
           createStartButton(true);
           setInterval(detectAndRunMyAccount, 400);
-
-          const path = window.location.pathname;
-          setLastPath(path);
-          const route = MYACCOUNT_ROUTES.find((r) => path.includes(r.match));
-          const stepId = route ? route.match.replace(/^\//, "") : "myaccount";
-          const startTime = Date.now();
-
-          setHandlerInFlight(true);
-          log.step("▶", stepId);
-
-          withTimeout(
-            Promise.resolve(route ? route.handler() : handleMyAccountPage()),
-            HANDLER_TIMEOUT,
-            stepId
-          )
-            .then((result) => {
-              const dur = ((Date.now() - startTime) / 1000).toFixed(1);
-              if (result === false) {
-                log.error("✗", stepId, dur + "s", "FAILED");
-                transition(STATE.ERROR, "Handler failed on " + path);
-              } else {
-                log.step("✓", stepId, dur + "s");
-              }
-            })
-            .catch((err) => {
-              const dur = ((Date.now() - startTime) / 1000).toFixed(1);
-              log.error("✗", stepId, dur + "s", err.message || "Unknown error");
-              transition(STATE.ERROR, err.message || "Unknown error occurred");
-            })
-            .finally(() => {
-              setHandlerInFlight(false);
-            });
+          detectAndRunMyAccount();
           return;
         }
         log.warn("Session not found, retry " + attempt + "/" + MAX_RETRIES);
