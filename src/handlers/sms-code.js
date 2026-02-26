@@ -1,6 +1,6 @@
 import { STATE, DELAY, SMS_POLL_INTERVAL, SMS_TIMEOUT } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig, setSmsPoller, setLastPath } from "../state.js";
+import { transition, getState, getConfig, setSmsPoller, setLastPath } from "../state.js";
 import { humanDelay, humanFillInput, humanClickNext } from "../human.js";
 import { waitFor, getElementByXpath } from "../helpers.js";
 import { apiRequest } from "../api.js";
@@ -14,12 +14,16 @@ export async function handleSmsCodePage() {
   const startTime = Date.now();
   await waitFor("#code");
 
-  const poller = setInterval(() => {
+  let cancelled = false;
+  const cancelId = { stop() { cancelled = true; } };
+  setSmsPoller(cancelId);
+
+  while (!cancelled && getState() === STATE.WAITING_SMS) {
     const elapsed = Date.now() - startTime;
     log("Polling SMS code, elapsed:", elapsed + "ms");
 
     if (elapsed > SMS_TIMEOUT) {
-      log('SMS timeout, clicking "Get new code"');
+      log.warn('SMS timeout, clicking "Get new code"');
       stopSmsPoller();
       const resendBtn = getElementByXpath(
         "//button[.//span[text()='Get new code']]",
@@ -28,21 +32,25 @@ export async function handleSmsCodePage() {
         resendBtn.click();
         setLastPath("");
       }
-      return;
+      return true;
     }
 
-    apiRequest("GET", "/sms/poll/" + encodeURIComponent(getConfig().id))
-      .then(async (data) => {
-        log("Poll response:", JSON.stringify(data));
-        if (data.status === "received" && data.code) {
-          stopSmsPoller();
-          await humanDelay(DELAY.MEDIUM);
-          await humanFillInput("#code", data.code);
-          await humanClickNext();
-        }
-      })
-      .catch((err) => log("Poll error:", err));
-  }, SMS_POLL_INTERVAL);
-  setSmsPoller(poller);
+    try {
+      const data = await apiRequest("GET", "/sms/poll/" + encodeURIComponent(getConfig().id));
+      log("Poll response:", JSON.stringify(data));
+      if (data.status === "received" && data.code) {
+        stopSmsPoller();
+        await humanDelay(DELAY.MEDIUM);
+        await humanFillInput("#code", data.code);
+        await humanClickNext();
+        return true;
+      }
+    } catch (err) {
+      log.error("Poll error:", err);
+    }
+
+    await new Promise((r) => setTimeout(r, SMS_POLL_INTERVAL));
+  }
+
   return true;
 }

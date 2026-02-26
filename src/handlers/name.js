@@ -22,7 +22,7 @@ export async function handleNamePage() {
       await fetchConfig();
       log("Config loaded:", getConfig().email);
     } catch (err) {
-      log("Config fetch failed:", err.message || err);
+      log.error("Config fetch failed:", err.message || err);
       throw new Error("Failed to fetch config: " + (err.message || "Network Error"));
     }
   }
@@ -37,7 +37,7 @@ export async function handleNamePage() {
 
   const hasError = await awaitNavigationOrError([hasNameError]);
   if (hasError) {
-    log("Detected name validation error.");
+    log.warn("Detected name validation error.");
     return false;
   }
 

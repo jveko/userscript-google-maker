@@ -18,7 +18,7 @@ export async function handleRecoveryPhonePage() {
     await humanClick(btn);
     log("Clicked 'Skip'");
   } else {
-    log("'Skip' button not found on recovery phone page");
+    log.warn("'Skip' button not found on recovery phone page");
   }
   return true;
 }

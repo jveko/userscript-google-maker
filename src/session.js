@@ -26,7 +26,7 @@ export function loadSession() {
       }
     }
   } catch (e) {
-    log("Failed to load session:", e);
+    log.error("Failed to load session:", e);
     clearSession();
   }
   return false;

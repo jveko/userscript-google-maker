@@ -31,7 +31,7 @@ export async function handleBirthdayGenderPage() {
 
   const hasError = await awaitNavigationOrError([hasBirthdayError]);
   if (hasError) {
-    log("Detected birthday/age requirement error.");
+    log.warn("Detected birthday/age requirement error.");
     return false;
   }
 

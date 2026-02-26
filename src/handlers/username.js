@@ -41,7 +41,7 @@ async function handleUsernameTaken() {
 
   emailRetryCount++;
   if (emailRetryCount > MAX_EMAIL_RETRIES) {
-    log("Email retry limit reached (" + MAX_EMAIL_RETRIES + "), clearing session");
+    log.warn("Email retry limit reached (" + MAX_EMAIL_RETRIES + "), clearing session");
     emailRetryCount = 0;
     clearSession();
     transition(STATE.IDLE);
@@ -51,7 +51,7 @@ async function handleUsernameTaken() {
   }
 
   const config = getConfig();
-  log("Username taken, regenerating email (attempt " + emailRetryCount + "/" + MAX_EMAIL_RETRIES + ")");
+  log.warn("Username taken, regenerating email (attempt " + emailRetryCount + "/" + MAX_EMAIL_RETRIES + ")");
 
   try {
     const data = await regenerateEmail(config.id);
@@ -66,7 +66,7 @@ async function handleUsernameTaken() {
     await humanClickNext();
     return await handleUsernameErrorPostClick();
   } catch (err) {
-    log("Email regeneration failed:", err.message || err);
+    log.error("Email regeneration failed:", err.message || err);
     clearSession();
     transition(STATE.IDLE);
     setLastPath("");
@@ -79,7 +79,7 @@ async function handleUsernameTaken() {
 async function handleUsernameErrorPostClick() {
   const hasError = await awaitNavigationOrError([hasUsernameError]);
   if (hasError) {
-    log("Detected username error after submit, handling");
+    log.warn("Detected username error after submit, handling");
     return await handleUsernameTaken();
   }
   return true;

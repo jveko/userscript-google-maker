@@ -34,7 +34,7 @@ function apiRequest(method, path, body) {
         let resBody;
         try { resBody = JSON.parse(res.responseText); } catch (_) { resBody = null; }
         if (res.status < 200 || res.status >= 300) {
-          log("API HTTP error:", res.status, res.statusText);
+          log.error("API HTTP error:", res.status, res.statusText);
           const err = new Error("HTTP " + res.status);
           err.status = res.status;
           err.body = resBody;
@@ -81,7 +81,7 @@ export async function apiRequestWithRetry(method, path, body) {
       lastError = err;
       if (attempt < API_MAX_RETRIES - 1) {
         const backoff = API_RETRY_BASE_MS * Math.pow(2, attempt);
-        log("API retry", attempt + 1, "in", backoff + "ms:", err.message || err);
+        log.warn("API retry", attempt + 1, "in", backoff + "ms:", err.message || err);
         await new Promise((r) => setTimeout(r, backoff));
       }
     }

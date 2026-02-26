@@ -1,13 +1,13 @@
-import { STATE } from "../constants.js";
+import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getState, getConfig } from "../state.js";
+import { transition, getConfig } from "../state.js";
 import { apiRequestWithRetry } from "../api.js";
-import { clearSession, startNewSession, getSettings } from "../session.js";
-import { humanDelay } from "../human.js";
+import { humanDelay, humanClick } from "../human.js";
+import { getElementByXpath } from "../helpers.js";
 
 export async function handleMyAccountPage() {
-  transition(STATE.COMPLETED);
-  log("→ handleMyAccountPage (account created successfully)");
+  transition(STATE.NAVIGATING_SECURITY);
+  log("→ handleMyAccountPage (confirming account & navigating to security)");
   try {
     const data = await apiRequestWithRetry(
       "PATCH",
@@ -15,23 +15,14 @@ export async function handleMyAccountPage() {
     );
     log("Confirm response:", JSON.stringify(data));
   } catch (err) {
-    log("Confirm error:", err);
+    log.error("Confirm error:", err);
   }
-  
-  clearSession();
 
-  const settings = getSettings();
-  if (settings.mode === "continuous") {
-    log("Infinite mode active: waiting 4s then restarting...");
-    await humanDelay(4000, 5000);
-    
-    // Check if user clicked stop or reset during the delay
-    if (getState() === STATE.COMPLETED) {
-      log("Restarting flow...");
-      startNewSession();
-      window.location.href = "https://accounts.google.com/AddSession";
-    } else {
-      log("Infinite loop aborted because state changed (user intervened).");
-    }
+  await humanDelay(DELAY.LONG);
+  const securityLink = getElementByXpath("//a[contains(., 'Security')]");
+  log("Security link:", securityLink ? "✓" : "✗");
+  if (securityLink) {
+    await humanClick(securityLink);
   }
+  return true;
 }

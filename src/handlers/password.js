@@ -25,7 +25,7 @@ export async function handlePasswordPage() {
 
   const hasError = await awaitNavigationOrError([hasPasswordError]);
   if (hasError) {
-    log("Detected password strength error. Needs to be handled or restarted.");
+    log.warn("Detected password strength error. Needs to be handled or restarted.");
     return false; 
   }
 

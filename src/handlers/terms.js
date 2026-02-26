@@ -1,9 +1,7 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig } from "../state.js";
+import { transition } from "../state.js";
 import { humanDelay, humanClick, rand } from "../human.js";
-import { apiRequestWithRetry } from "../api.js";
-import { clearSession } from "../session.js";
 
 function findButtonByText(text, exact = true) {
   const buttons = document.querySelectorAll("button");
@@ -37,7 +35,7 @@ function scrollUntilVisible(buttonText, maxAttempts = 60) {
       }
       if (++attempts >= maxAttempts) {
         clearInterval(interval);
-        log("Scroll limit reached, button not found:", buttonText);
+        log.warn("Scroll limit reached, button not found:", buttonText);
         resolve(null);
         return;
       }
@@ -95,24 +93,16 @@ export async function handleTermsPage() {
     log("Clicking 'I agree'");
     await humanClick(agreeBtn);
 
-    // Confirm account and clear session here because myaccount.google.com
-    // blocks userscript injection via CSP on iOS Safari/Stay
-    await humanDelay(3000, 5000);
-    try {
-      const config = getConfig();
-      const data = await apiRequestWithRetry(
-        "PATCH",
-        "/confirm/" + encodeURIComponent(config.id),
-      );
-      log("Confirm response:", JSON.stringify(data));
-    } catch (err) {
-      log("Confirm error:", err);
+    // Wait for Google to process, then force a clean navigation to myaccount.
+    // Stay extension on iOS Safari fails to inject scripts after Google's
+    // cross-domain redirect chain, but works on clean top-level navigations.
+    await humanDelay(4000, 6000);
+    if (window.location.hostname === "accounts.google.com") {
+      log("Forcing clean navigation to myaccount.google.com");
+      window.location.href = "https://myaccount.google.com";
     }
-    clearSession();
-    transition(STATE.COMPLETED);
-    log("Account creation completed, session cleared");
   } else {
-    log("'I agree' button not found after scrolling");
+    log.warn("'I agree' button not found after scrolling");
   }
 
   return true;
