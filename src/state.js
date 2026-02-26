@@ -2,7 +2,7 @@ import { STATE } from "./constants.js";
 import { log } from "./log.js";
 
 const ALLOWED = {
-  [STATE.IDLE]:                     [STATE.SIGNING_IN],
+  [STATE.IDLE]:                     [STATE.SIGNING_IN, STATE.ACCEPTING_TERMS],
   [STATE.SIGNING_IN]:               [STATE.FILLING_NAME, STATE.SECURITY_CHALLENGE],
   [STATE.FILLING_NAME]:             [STATE.FILLING_BIRTHDAY],
   [STATE.FILLING_BIRTHDAY]:         [STATE.FILLING_USERNAME],

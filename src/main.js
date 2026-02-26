@@ -194,6 +194,8 @@ if (
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         if (loadSession()) {
           log("Session found on attempt " + attempt);
+          transition(STATE.ACCEPTING_TERMS);
+          log("Resuming from session on myaccount");
           createStartButton(true);
           setInterval(detectAndRunMyAccount, 400);
           detectAndRunMyAccount();
