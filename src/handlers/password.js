@@ -1,6 +1,6 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig } from "../state.js";
+import { transition, getConfig, setLastPath } from "../state.js";
 import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
 import { waitFor, awaitNavigationOrError } from "../helpers.js";
 
@@ -24,9 +24,13 @@ export async function handlePasswordPage() {
   await humanClickNext();
 
   const hasError = await awaitNavigationOrError([hasPasswordError]);
-  if (hasError) {
+  if (hasError === true) {
     log.warn("Detected password strength error. Needs to be handled or restarted.");
     return false; 
+  }
+  if (hasError === null) {
+    log.warn("Page did not navigate after password submit, allowing re-detection");
+    setLastPath("");
   }
 
   return true;

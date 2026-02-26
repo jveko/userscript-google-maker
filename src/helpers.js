@@ -27,7 +27,7 @@ export function getElementByXpath(path) {
   ).singleNodeValue;
 }
 
-export function awaitNavigationOrError(errorChecks) {
+export function awaitNavigationOrError(errorChecks, timeout = 15000) {
   return new Promise((resolve) => {
     const startPath = window.location.pathname;
     
@@ -39,11 +39,16 @@ export function awaitNavigationOrError(errorChecks) {
       return null;
     };
 
+    const cleanup = () => {
+      observer.disconnect();
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
+
     const interval = setInterval(() => {
       const state = checkState();
       if (state !== null) {
-        observer.disconnect();
-        clearInterval(interval);
+        cleanup();
         resolve(state);
       }
     }, 500);
@@ -51,13 +56,18 @@ export function awaitNavigationOrError(errorChecks) {
     const observer = new MutationObserver(() => {
       const state = checkState();
       if (state !== null) {
-        observer.disconnect();
-        clearInterval(interval);
+        cleanup();
         resolve(state);
       }
     });
     
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+    const timer = setTimeout(() => {
+      cleanup();
+      log.warn("awaitNavigationOrError: timed out after", timeout + "ms");
+      resolve(null);
+    }, timeout);
   });
 }
 

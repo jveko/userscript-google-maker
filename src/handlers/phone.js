@@ -1,6 +1,6 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig } from "../state.js";
+import { transition, getConfig, setLastPath } from "../state.js";
 import {
   humanScroll,
   humanDelay,
@@ -72,7 +72,11 @@ export async function handlePhoneVerificationPage() {
     await humanClickNext();
 
     const hasError = await awaitNavigationOrError([hasPhoneRejectionError]);
-    if (!hasError) {
+    if (hasError === false || hasError === null) {
+      if (hasError === null) {
+        log.warn("Page did not navigate after phone submit, allowing re-detection");
+        setLastPath("");
+      }
       return true;
     }
 

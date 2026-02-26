@@ -78,9 +78,13 @@ async function handleUsernameTaken() {
 
 async function handleUsernameErrorPostClick() {
   const hasError = await awaitNavigationOrError([hasUsernameError]);
-  if (hasError) {
+  if (hasError === true) {
     log.warn("Detected username error after submit, handling");
     return await handleUsernameTaken();
+  }
+  if (hasError === null) {
+    log.warn("Page did not navigate after username submit, allowing re-detection");
+    setLastPath("");
   }
   return true;
 }

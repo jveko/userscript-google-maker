@@ -1,6 +1,6 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
-import { transition, getConfig } from "../state.js";
+import { transition, getConfig, setLastPath } from "../state.js";
 import { humanScroll, humanDelay, humanFillInput, humanSelectDropdown, humanClickNext } from "../human.js";
 import { waitFor, awaitNavigationOrError } from "../helpers.js";
 
@@ -30,9 +30,13 @@ export async function handleBirthdayGenderPage() {
   await humanClickNext();
 
   const hasError = await awaitNavigationOrError([hasBirthdayError]);
-  if (hasError) {
+  if (hasError === true) {
     log.warn("Detected birthday/age requirement error.");
     return false;
+  }
+  if (hasError === null) {
+    log.warn("Page did not navigate after birthday submit, allowing re-detection");
+    setLastPath("");
   }
 
   return true;
