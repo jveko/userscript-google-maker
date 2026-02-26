@@ -17,7 +17,7 @@ export function loadSession() {
     if (data) {
       if (data.email) {
         setConfig(data);
-        log("Session restored:", JSON.stringify(data));
+        log("Session restored:", data.email);
         return true;
       }
       if (data.started) {

@@ -13,7 +13,7 @@ export async function handleMyAccountPage() {
       "PATCH",
       "/confirm/" + encodeURIComponent(getConfig().id),
     );
-    log("Confirm response:", JSON.stringify(data));
+    log("Account confirmed");
   } catch (err) {
     log.error("Confirm error:", err);
   }

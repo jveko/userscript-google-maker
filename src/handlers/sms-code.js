@@ -37,7 +37,7 @@ export async function handleSmsCodePage() {
 
     try {
       const data = await apiRequest("GET", "/sms/poll/" + encodeURIComponent(getConfig().id));
-      log("Poll response:", JSON.stringify(data));
+      log("Poll:", data.status);
       if (data.status === "received" && data.code) {
         stopSmsPoller();
         await humanDelay(DELAY.MEDIUM);

@@ -42,7 +42,7 @@ export async function handlePhoneVerificationPage() {
         const renewData = await apiRequestWithRetry("POST", "/sms/renew", {
           id: config.id,
         });
-        log("Renew success:", JSON.stringify(renewData));
+        log("Renew success, new phone assigned");
         config.phoneNumber = renewData.phoneNumber;
         saveSession();
       } catch (err) {
@@ -60,7 +60,7 @@ export async function handlePhoneVerificationPage() {
         log.error("SMS request error after retries:", err);
         return false;
       }
-      log("SMS request response:", JSON.stringify(data));
+      log("SMS requested, phone assigned");
       config.phoneNumber = data.phoneNumber;
       saveSession();
     }

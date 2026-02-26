@@ -112,7 +112,7 @@ export async function fetchConfig() {
     recoveryEmail: data.recoveryEmail,
   };
   setConfig(config);
-  log("CONFIG:", JSON.stringify(config));
+  log("Config loaded:", config.email);
   saveSession();
   return config;
 }

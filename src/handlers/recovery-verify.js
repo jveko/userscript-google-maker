@@ -79,7 +79,7 @@ async function waitForRecoveryCode(id) {
     log("Polling recovery code, elapsed:", elapsed + "ms");
     try {
       const data = await apiRequest("GET", "/recovery/" + encodeURIComponent(id));
-      log("Recovery poll response:", JSON.stringify(data));
+      log("Recovery poll:", data.status);
       if (data.status === "found" && data.code) {
         return data.code;
       }
