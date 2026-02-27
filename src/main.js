@@ -5,7 +5,7 @@ import { log } from "./log.js";
 import { transition, getState, getLastPath, setLastPath, isHandlerInFlight, setHandlerInFlight, isSubmitLocked, clearSubmitLock } from "./state.js";
 import { loadSession, startNewSession } from "./session.js";
 import { stopSmsPoller } from "./sms.js";
-import { createStartButton } from "./ui/panel.js";
+import { createStartButton, triggerStart } from "./ui/panel.js";
 import { handleSignInPage } from "./handlers/signin.js";
 import { handleNamePage } from "./handlers/name.js";
 import { handleBirthdayGenderPage } from "./handlers/birthday.js";
@@ -35,11 +35,17 @@ function withTimeout(promise, timeoutMs, label) {
 
 console.log(TAG, "Script loaded on", window.location.href);
 
+// Auto-start: if on the trigger URL, set flag and redirect to accounts page
+if (window.location.hostname === "example.com" && window.location.pathname === "/autostart") {
+  console.log(TAG, "Auto-start triggered via URL");
+  GM_setValue("gah_autostart", true);
+  window.location.href = "https://accounts.google.com/lifecycle/steps/signup/name";
+}
+
 // Only run on top-level pages of accounts.google.com or myaccount.google.com
-const hostname = window.location.hostname;
-if (
-  hostname !== "accounts.google.com" &&
-  hostname !== "myaccount.google.com"
+else if (
+  window.location.hostname !== "accounts.google.com" &&
+  window.location.hostname !== "myaccount.google.com"
 ) {
   console.log(TAG, "Skipping - not on target domain");
 } else {
@@ -221,13 +227,12 @@ if (
       log("No session, showing Start button");
       createStartButton(false);
 
-      if (window.location.hash === "#autostart") {
-        log("Auto-start triggered via URL hash");
-        history.replaceState(null, "", window.location.pathname + window.location.search);
-        startNewSession();
-        transition(STATE.SIGNING_IN);
-        setLastPath("");
-        window.location.href = "https://accounts.google.com/AddSession";
+      if (GM_getValue("gah_autostart", false)) {
+        GM_deleteValue("gah_autostart");
+        log("Auto-start: triggering Start");
+        setTimeout(() => {
+          if (triggerStart) triggerStart();
+        }, 500);
       }
     }
   }

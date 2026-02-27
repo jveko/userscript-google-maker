@@ -125,6 +125,8 @@ function createStatRow(label, valueId) {
   return row;
 }
 
+export let triggerStart = null;
+
 // --- Main Panel Initialization ---
 
 export function createStartButton(hasSession) {
@@ -368,6 +370,8 @@ export function createStartButton(hasSession) {
     setLastPath("");
     window.location.href = "https://accounts.google.com/AddSession";
   };
+
+  triggerStart = startBtn.onclick;
 
   cancelBtn.onclick = () => {
     clearSession();
