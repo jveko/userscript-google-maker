@@ -3,7 +3,7 @@
 import { TAG, STATE, SESSION_KEY } from "./constants.js";
 import { log } from "./log.js";
 import { transition, getState, getLastPath, setLastPath, isHandlerInFlight, setHandlerInFlight, isSubmitLocked, clearSubmitLock } from "./state.js";
-import { loadSession } from "./session.js";
+import { loadSession, startNewSession } from "./session.js";
 import { stopSmsPoller } from "./sms.js";
 import { createStartButton } from "./ui/panel.js";
 import { handleSignInPage } from "./handlers/signin.js";
@@ -220,6 +220,15 @@ if (
     } else {
       log("No session, showing Start button");
       createStartButton(false);
+
+      if (window.location.hash === "#autostart") {
+        log("Auto-start triggered via URL hash");
+        history.replaceState(null, "", window.location.pathname + window.location.search);
+        startNewSession();
+        transition(STATE.SIGNING_IN);
+        setLastPath("");
+        window.location.href = "https://accounts.google.com/AddSession";
+      }
     }
   }
 }
