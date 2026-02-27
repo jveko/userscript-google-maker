@@ -38,6 +38,7 @@ console.log(TAG, "Script loaded on", window.location.href);
 // Auto-start: if on the trigger URL, set flag and redirect to accounts page
 if (window.location.hostname === "example.com" && window.location.pathname === "/autostart") {
   console.log(TAG, "Auto-start triggered via URL");
+  window.name = "autostart";
   window.location.href = "https://accounts.google.com/AddSession";
 }
 
@@ -223,9 +224,9 @@ else if (
       createStartButton(true);
       detectAndRun();
     } else {
-      const autostart = GM_getValue("gah_autostart", false);
+      const autostart = window.name === "autostart";
       if (autostart) {
-        GM_deleteValue("gah_autostart");
+        window.name = "";
         log("Auto-start: triggering Start");
         startNewSession();
         transition(STATE.SIGNING_IN);
