@@ -12,45 +12,50 @@ function findButtonByText(text, exact = true) {
   return null;
 }
 
-function scrollUntilVisible(buttonText, maxAttempts = 60) {
-  return new Promise((resolve) => {
-    let attempts = 0;
-    
-    // Some Google pages put the scrollbar on a div inside the body, not the window itself
-    const getScrollContainers = () => [
-      document.querySelector('div[role="main"]'),
-      document.querySelector('#yDmH0d'),
-      document.querySelector('c-wiz'),
-      document.scrollingElement,
-      window
-    ].filter(Boolean);
+function findScrollableContainer() {
+  const candidates = [
+    document.querySelector('div[role="main"]'),
+    document.querySelector('main'),
+    document.querySelector('c-wiz'),
+    document.querySelector('#yDmH0d'),
+  ].filter(Boolean);
 
-    const interval = setInterval(() => {
+  for (const el of candidates) {
+    if (el.scrollHeight > el.clientHeight + 10) return el;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
+function scrollUntilVisible(buttonText) {
+  return new Promise((resolve) => {
+    const container = findScrollableContainer();
+    let totalScrolled = 0;
+    log("Scroll container:", container.tagName || "document",
+        "scrollHeight:", container.scrollHeight);
+
+    const tick = () => {
       const btn = findButtonByText(buttonText);
       if (btn && btn.offsetParent !== null && btn.offsetHeight > 0) {
-        clearInterval(interval);
         log("Button visible:", buttonText);
         resolve(btn);
         return;
       }
-      if (++attempts >= maxAttempts) {
-        clearInterval(interval);
-        log.warn("Scroll limit reached, button not found:", buttonText);
+
+      const scrollHeight = container.scrollHeight;
+      if (totalScrolled >= scrollHeight) {
+        log.warn("Scrolled to bottom, button not found:", buttonText);
         resolve(null);
         return;
       }
-      
-      const containers = getScrollContainers();
-      for (const container of containers) {
-        if (container === window) {
-          window.scrollBy({ top: rand(300, 600), behavior: "smooth" });
-        } else {
-          try {
-            container.scrollBy({ top: rand(300, 600), behavior: "smooth" });
-          } catch(e) {}
-        }
-      }
-    }, rand(400, 800));
+
+      const distance = rand(80, 150);
+      container.scrollBy(0, distance);
+      totalScrolled += distance;
+
+      setTimeout(tick, rand(80, 150));
+    };
+
+    tick();
   });
 }
 
