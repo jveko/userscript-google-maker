@@ -1,7 +1,7 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
 import { transition, getConfig } from "../state.js";
-import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
+import { humanScroll, humanDelay, humanFillInput, humanClickNext, humanIdle, humanSurveyPage, humanTogglePasswordVisibility } from "../human.js";
 import { waitFor, awaitNavigationOrError } from "../helpers.js";
 
 function hasPasswordError() {
@@ -15,11 +15,15 @@ export async function handlePasswordPage() {
   log("→ handlePasswordPage");
   await waitFor('input[name="Passwd"]');
   await humanScroll();
+  await humanSurveyPage();
   await humanDelay(DELAY.MEDIUM);
   const config = getConfig();
   await humanFillInput('input[name="Passwd"]', config.password);
+  await humanTogglePasswordVisibility();
+  await humanIdle();
   await humanDelay(DELAY.MEDIUM);
   await humanFillInput('input[name="PasswdAgain"]', config.password);
+  await humanIdle();
 
   await humanClickNext();
 

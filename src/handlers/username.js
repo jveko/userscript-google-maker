@@ -1,7 +1,7 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
 import { transition, getConfig, setConfig } from "../state.js";
-import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
+import { humanScroll, humanDelay, humanFillInput, humanClickNext, humanIdle, humanSurveyPage, simulateMobileTouch } from "../human.js";
 import { waitFor, awaitNavigationOrError } from "../helpers.js";
 import { clearSession, saveSession } from "../session.js";
 import { regenerateEmail } from "../api.js";
@@ -31,7 +31,8 @@ async function handleUsernameTaken() {
         const container = walker.currentNode.parentElement;
         const suggestion = container.querySelector("button");
         if (suggestion) {
-          suggestion.click();
+          await simulateMobileTouch(suggestion);
+          await humanDelay(DELAY.SHORT);
           await humanClickNext();
           return await handleUsernameErrorPostClick();
         }
@@ -93,16 +94,18 @@ export async function handleUsernamePage() {
 
   await waitFor('input[name="usernameRadio"], input[name="Username"]');
   await humanScroll();
+  await humanSurveyPage();
   await humanDelay(DELAY.LONG);
 
   const customRadio = document.querySelector(
     'input[name="usernameRadio"][value="custom"]',
   );
   if (customRadio) {
-    customRadio.click();
+    await simulateMobileTouch(customRadio);
     await humanDelay(DELAY.MEDIUM);
   }
 
+  await humanIdle();
   await humanFillInput('input[name="Username"]', getConfig().username);
   await humanClickNext();
   return await handleUsernameErrorPostClick();

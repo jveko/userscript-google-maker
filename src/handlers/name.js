@@ -1,7 +1,7 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
 import { transition, getConfig } from "../state.js";
-import { humanScroll, humanDelay, humanFillInput, humanClickNext } from "../human.js";
+import { humanScroll, humanDelay, humanFillInput, humanClickNext, humanIdle, humanSurveyPage, humanRevisitField } from "../human.js";
 import { waitFor, awaitNavigationOrError } from "../helpers.js";
 import { fetchConfig } from "../api.js";
 
@@ -29,10 +29,15 @@ export async function handleNamePage() {
 
   await waitFor("#firstName");
   await humanScroll();
+  await humanSurveyPage();
   await humanDelay(DELAY.MEDIUM);
+  await humanIdle();
   await humanFillInput("#firstName", getConfig().firstName);
+  await humanIdle();
   await humanDelay(DELAY.SHORT);
   await humanFillInput("#lastName", getConfig().lastName);
+  await humanRevisitField("#firstName");
+  await humanIdle();
   await humanClickNext();
 
   const hasError = await awaitNavigationOrError([hasNameError]);

@@ -1,7 +1,7 @@
 import { STATE, DELAY } from "../constants.js";
 import { log } from "../log.js";
 import { transition } from "../state.js";
-import { humanDelay, humanClick, rand } from "../human.js";
+import { humanDelay, humanClick, humanReadPage, rand } from "../human.js";
 
 function findButtonByText(text, exact = true) {
   const buttons = document.querySelectorAll("button");
@@ -86,6 +86,7 @@ export async function handleTermsPage() {
   transition(STATE.ACCEPTING_TERMS);
   log("→ handleTermsPage");
   await humanDelay(1000, 2000);
+  await humanReadPage();
 
   await handlePrivacySettings();
   await humanDelay(DELAY.MEDIUM);

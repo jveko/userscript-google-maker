@@ -6,6 +6,16 @@ export function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function gaussianRand(min, max) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  num = num / 6 + 0.5;
+  num = Math.max(0, Math.min(1, num));
+  return Math.floor(min + num * (max - min));
+}
+
 export function humanDelay(minOrPreset, max) {
   if (Array.isArray(minOrPreset)) {
     return new Promise((r) => setTimeout(r, rand(minOrPreset[0], minOrPreset[1])));
@@ -92,10 +102,16 @@ export async function humanType(el, text) {
     setNativeValue(el, el.value + char);
     fireKeyEvents(el, char);
 
-    if (i > 0 && i % rand(5, 10) === 0) {
-      await humanDelay(DELAY.TYPING_PAUSE);
+    // Ramp-up: first 3 chars typed slower as fingers find the keys
+    const rampup = i < 3 ? 1.6 - i * 0.2 : 1.0;
+
+    if (char === " " || char === "@" || char === ".") {
+      await humanDelay(gaussianRand(DELAY.TYPING_PAUSE[0], DELAY.TYPING_PAUSE[1]));
+    } else if (i > 0 && i % rand(5, 10) === 0) {
+      await humanDelay(gaussianRand(DELAY.TYPING_PAUSE[0], DELAY.TYPING_PAUSE[1]));
     } else {
-      await humanDelay(DELAY.TYPING);
+      const base = gaussianRand(DELAY.TYPING[0], DELAY.TYPING[1]);
+      await new Promise((r) => setTimeout(r, Math.round(base * rampup)));
     }
   }
 
@@ -129,10 +145,10 @@ export async function simulateMobileTouch(el) {
     target: el,
     clientX: clientX,
     clientY: clientY,
-    radiusX: 2.5,
-    radiusY: 2.5,
-    rotationAngle: 10,
-    force: 0.5,
+    radiusX: 1.5 + Math.random() * 3.5,
+    radiusY: 1.5 + Math.random() * 3.5,
+    rotationAngle: Math.random() * 25,
+    force: 0.3 + Math.random() * 0.5,
   });
 
   const evtOpts = {
@@ -147,10 +163,13 @@ export async function simulateMobileTouch(el) {
   };
 
   el.dispatchEvent(new TouchEvent("touchstart", evtOpts));
-  await humanDelay(30, 80);
+  // Variable hold: quick flick (40-70ms), normal tap (70-150ms), deliberate press (150-250ms)
+  const holdRoll = Math.random();
+  const holdMs = holdRoll < 0.4 ? rand(40, 70) : holdRoll < 0.85 ? rand(70, 150) : rand(150, 250);
+  await humanDelay(holdMs, holdMs);
 
   el.dispatchEvent(new TouchEvent("touchend", evtOpts));
-  await humanDelay(10, 30);
+  await humanDelay(10, 40);
   
   el.dispatchEvent(new PointerEvent("pointerdown", { ...evtOpts, pointerId: 1, pointerType: "touch" }));
   el.dispatchEvent(new MouseEvent("mousedown", evtOpts));
@@ -177,6 +196,69 @@ export async function humanClickNext() {
     // wait slightly before continuing so DOM has time to react naturally
     await humanDelay(DELAY.SHORT);
   }
+}
+
+export async function humanIdle() {
+  const roll = Math.random();
+  if (roll < 0.25) {
+    const amount = rand(-25, 45);
+    window.scrollBy({ top: amount, behavior: "smooth" });
+    await humanDelay(DELAY.SHORT);
+  } else if (roll < 0.4) {
+    await humanDelay(DELAY.MEDIUM);
+  } else if (roll < 0.5) {
+    // Distraction pause — user glanced at a notification or zoned out
+    await humanDelay(2500, 5000);
+  }
+}
+
+export async function humanReadPage() {
+  await humanDelay(DELAY.LONG);
+  for (let i = 0; i < rand(1, 3); i++) {
+    window.scrollBy({ top: rand(30, 100), behavior: "smooth" });
+    await humanDelay(gaussianRand(600, 1800));
+  }
+  if (Math.random() < 0.3) {
+    window.scrollBy({ top: rand(-60, -20), behavior: "smooth" });
+    await humanDelay(DELAY.SHORT);
+  }
+}
+
+export async function humanSurveyPage() {
+  // Look at the whole form before starting to fill it
+  if (Math.random() < 0.4) return; // not every time
+  const scrollDown = rand(150, 350);
+  window.scrollBy({ top: scrollDown, behavior: "smooth" });
+  await humanDelay(gaussianRand(800, 2000));
+  window.scrollBy({ top: -scrollDown + rand(-30, 30), behavior: "smooth" });
+  await humanDelay(DELAY.SHORT);
+}
+
+export async function humanRevisitField(selector) {
+  if (Math.random() < 0.7) return; // only ~30% of the time
+  const el = document.querySelector(selector);
+  if (!el) return;
+  await simulateMobileTouch(el);
+  await humanDelay(gaussianRand(400, 1200));
+  // blur away without changing anything
+  el.blur();
+  el.dispatchEvent(new Event("blur", { bubbles: true }));
+  await humanDelay(DELAY.SHORT);
+}
+
+export async function humanTogglePasswordVisibility() {
+  if (Math.random() < 0.6) return; // only ~40% of the time
+  // Google uses a button/div near the password input to toggle visibility
+  const toggle =
+    document.querySelector('div[jsname="YRMmle"]') ||
+    document.querySelector('[aria-label*="Show password"]') ||
+    document.querySelector('input[name="Passwd"]')?.parentElement?.querySelector('[role="button"]');
+  if (!toggle) return;
+  await humanDelay(DELAY.MEDIUM);
+  await simulateMobileTouch(toggle);
+  await humanDelay(gaussianRand(800, 2000)); // look at the password
+  await simulateMobileTouch(toggle); // hide it again
+  await humanDelay(DELAY.SHORT);
 }
 
 export async function humanSelectDropdown(containerSelector, optionText) {

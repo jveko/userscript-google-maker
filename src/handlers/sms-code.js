@@ -1,7 +1,7 @@
 import { STATE, DELAY, SMS_POLL_INTERVAL, SMS_TIMEOUT } from "../constants.js";
 import { log } from "../log.js";
 import { transition, getState, getConfig, setSmsPoller } from "../state.js";
-import { humanDelay, humanFillInput, humanClickNext } from "../human.js";
+import { humanDelay, humanFillInput, humanClickNext, simulateMobileTouch } from "../human.js";
 import { waitFor, getElementByXpath } from "../helpers.js";
 import { apiRequest } from "../api.js";
 import { stopSmsPoller } from "../sms.js";
@@ -29,7 +29,7 @@ export async function handleSmsCodePage() {
         "//button[.//span[text()='Get new code']]",
       );
       if (resendBtn) {
-        resendBtn.click();
+        await simulateMobileTouch(resendBtn);
       }
       return true;
     }

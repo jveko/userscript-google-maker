@@ -6,6 +6,8 @@ import {
   humanDelay,
   humanFillInput,
   humanClickNext,
+  humanIdle,
+  humanSurveyPage,
 } from "../human.js";
 import { waitFor, awaitNavigationOrError } from "../helpers.js";
 import { apiRequestWithRetry } from "../api.js";
@@ -66,9 +68,12 @@ export async function handlePhoneVerificationPage() {
     }
 
     await humanScroll();
+    if (attempt === 0) await humanSurveyPage();
     await humanDelay(1000, 2500);
+    await humanIdle();
 
     await humanFillInput("#phoneNumberId", config.phoneNumber);
+    await humanIdle();
     await humanClickNext();
 
     const hasError = await awaitNavigationOrError([hasPhoneRejectionError]);
