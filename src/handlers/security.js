@@ -9,7 +9,7 @@ export async function handleSecurityPage() {
   log("→ handleSecurityPage");
   await humanDelay(DELAY.LONG);
 
-  const link = getElementByXpath("//a[contains(., 'Recovery email')]");
+  const link = getElementByXpath("//a[contains(@href, 'recovery/email')]");
   log("Recovery email link:", link ? "✓" : "✗");
   if (link) {
     await humanClick(link);
