@@ -127,7 +127,7 @@ function createStatRow(label, valueId) {
 
 // --- Main Panel Initialization ---
 
-export function createStartButton(hasSession) {
+export function createStartButton(hasSession, autostart = false) {
   const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const bgMain = isDark ? "#202124" : "#ffffff";
   const bgHeader = isDark ? "#303134" : "#f1f3f4";
@@ -431,4 +431,8 @@ export function createStartButton(hasSession) {
   });
 
   log("Advanced UI injected");
+
+  if (autostart) {
+    setTimeout(() => startBtn.click(), 500);
+  }
 }

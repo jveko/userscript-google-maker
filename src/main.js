@@ -224,18 +224,11 @@ else if (
       createStartButton(true);
       detectAndRun();
     } else {
-      log("No session, showing Start button");
-      createStartButton(false);
+      const autostart = GM_getValue("gah_autostart", false);
+      if (autostart) GM_deleteValue("gah_autostart");
 
-      if (GM_getValue("gah_autostart", false)) {
-        GM_deleteValue("gah_autostart");
-        log("Auto-start: triggering Start");
-        startNewSession();
-        transition(STATE.SIGNING_IN);
-        createStartButton(true);
-        setLastPath("");
-        detectAndRun();
-      }
+      log(autostart ? "Auto-start: will click Start" : "No session, showing Start button");
+      createStartButton(false, autostart);
     }
   }
 }
