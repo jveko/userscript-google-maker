@@ -5,7 +5,7 @@ import { log } from "./log.js";
 import { transition, getState, getLastPath, setLastPath, isHandlerInFlight, setHandlerInFlight, isSubmitLocked, clearSubmitLock } from "./state.js";
 import { loadSession, startNewSession } from "./session.js";
 import { stopSmsPoller } from "./sms.js";
-import { createStartButton, triggerStart } from "./ui/panel.js";
+import { createStartButton } from "./ui/panel.js";
 import { handleSignInPage } from "./handlers/signin.js";
 import { handleNamePage } from "./handlers/name.js";
 import { handleBirthdayGenderPage } from "./handlers/birthday.js";
@@ -39,7 +39,7 @@ console.log(TAG, "Script loaded on", window.location.href);
 if (window.location.hostname === "example.com" && window.location.pathname === "/autostart") {
   console.log(TAG, "Auto-start triggered via URL");
   GM_setValue("gah_autostart", true);
-  window.location.href = "https://accounts.google.com/lifecycle/steps/signup/name";
+  window.location.href = "https://accounts.google.com/AddSession";
 }
 
 // Only run on top-level pages of accounts.google.com or myaccount.google.com
@@ -230,9 +230,11 @@ else if (
       if (GM_getValue("gah_autostart", false)) {
         GM_deleteValue("gah_autostart");
         log("Auto-start: triggering Start");
-        setTimeout(() => {
-          if (triggerStart) triggerStart();
-        }, 500);
+        startNewSession();
+        transition(STATE.SIGNING_IN);
+        createStartButton(true);
+        setLastPath("");
+        detectAndRun();
       }
     }
   }
