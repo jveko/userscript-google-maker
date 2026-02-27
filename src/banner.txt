@@ -8,7 +8,6 @@
 // @author       dimaz
 // @match        https://accounts.google.com/*
 // @match        https://myaccount.google.com/*
-// @match        https://example.com/autostart
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue

@@ -35,15 +35,8 @@ function withTimeout(promise, timeoutMs, label) {
 
 console.log(TAG, "Script loaded on", window.location.href);
 
-// Auto-start: if on the trigger URL, set flag and redirect to accounts page
-if (window.location.hostname === "example.com" && window.location.pathname === "/autostart") {
-  console.log(TAG, "Auto-start triggered via URL");
-  window.name = "autostart";
-  window.location.href = "https://accounts.google.com/AddSession";
-}
-
 // Only run on top-level pages of accounts.google.com or myaccount.google.com
-else if (
+if (
   window.location.hostname !== "accounts.google.com" &&
   window.location.hostname !== "myaccount.google.com"
 ) {
@@ -224,19 +217,12 @@ else if (
       createStartButton(true);
       detectAndRun();
     } else {
-      const autostart = window.name === "autostart";
-      if (autostart) {
-        window.name = "";
-        log("Auto-start: triggering Start");
-        startNewSession();
-        transition(STATE.SIGNING_IN);
-        createStartButton(true);
-        setLastPath("");
-        detectAndRun();
-      } else {
-        log("No session, showing Start button");
-        createStartButton(false);
-      }
+      log("No session, auto-starting");
+      startNewSession();
+      transition(STATE.SIGNING_IN);
+      createStartButton(true);
+      setLastPath("");
+      window.location.href = "https://accounts.google.com/AddSession";
     }
   }
 }
